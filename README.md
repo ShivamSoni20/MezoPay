@@ -1,36 +1,119 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ⚖️ MezoPay
 
-## Getting Started
+**MezoPay** is a decentralized, gasless, peer-to-peer payment and bill-splitting platform built on **Mezo** primitives. It functions like a Web3 version of Venmo, allowing users to register case-insensitive @handles, send gasless MUSD stablecoins via EIP-2612 `permit2` signatures, and split group tabs natively in a single on-chain transaction.
 
-First, run the development server:
+---
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## 🚀 Key Features
+
+*   **Custom Profiles (@Usernames)**: Claim a unique, case-insensitive on-chain profile handle mapped 1-to-1 to your wallet via our `UsernameRegistry` contract.
+*   **Gasless MUSD Transfers**: Send payments directly to handles. Under the hood, MezoSplit leverages EIP-2612 signatures — the sender signs a transaction off-chain, and the receiver pays zero gas.
+*   **On-Chain Bill Splitting**: Create group tabs, calculate splits, and batch-settle balances in a single transaction with the `SplitManager` contract.
+*   **Rich SEO & Custom Sharing**: Dynamic sitemaps, rich Open Graph metadata, and optimized sharing configurations for social links.
+
+---
+
+## 🗺️ System Architecture
+
+Below is the interaction flow between the Frontend app, Mezo Passport, and our deployed smart contracts:
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Alice as Alice (@alice)
+    actor Bob as Bob (@bob)
+    participant App as MezoSplit Web UI
+    participant Reg as UsernameRegistry.sol
+    participant Split as SplitManager.sol
+    participant MUSD as MUSD Contract
+
+    Note over Alice, App: 1. Onboard & Resolve
+    Alice->>App: Connects Mezo Passport Wallet
+    App->>Reg: reverseLookup(alice_address)
+    Reg-->>App: Returns "@alice"
+    
+    Note over Alice, Bob: 2. P2P Gasless Send Flow
+    Alice->>App: Sends $10 to "@bob"
+    App->>Reg: resolve("bob")
+    Reg-->>App: Returns Bob's Wallet Address
+    App->>Alice: Prompts signature (EIP-2612 Permit)
+    Alice-->>App: Signs off-chain permit
+    App->>MUSD: Executes transferFrom with Permit
+    MUSD-->>Bob: Delivers $10 MUSD (Gas paid by Receiver/Relayer)
+
+    Note over Alice, Split: 3. Group Split Flow
+    Alice->>App: Creates group tab "Friday Pizza Night"
+    App->>Split: createTab("Pizza", [Alice, Bob], [share1, share2])
+    Split-->>App: Emits TabCreated (returns bytes32 tabId)
+    Alice->>App: Triggers "Settle Tab"
+    App->>Split: settleTab(tabId)
+    Split->>MUSD: Batch transfers from members to Creator
+    MUSD-->>Alice: Settles funds
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+---
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 📍 Smart Contract Configurations
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+The contracts are deployed on the **Mezo Testnet (Chain ID: 31611)**:
 
-## Learn More
+*   **MUSD (Testnet Token)**: [`0x118917a40FAF1CD7a13dB0Ef56C86De7973Ac503`](https://explorer.test.mezo.org/token/0x118917a40FAF1CD7a13dB0Ef56C86De7973Ac503)
+*   **UsernameRegistry**: [`0x8eB4E69A550Dc63BaB674469eBC516d893793de8`](https://explorer.test.mezo.org/address/0x8eB4E69A550Dc63BaB674469eBC516d893793de8#code) *(Fully Verified)*
+*   **SplitManager**: [`0x9cd6D4A92939A1b93fBb3c848c2cF3e9f09D4C10`](https://explorer.test.mezo.org/address/0x9cd6D4A92939A1b93fBb3c848c2cF3e9f09D4C10#code) *(Fully Verified)*
 
-To learn more about Next.js, take a look at the following resources:
+---
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 🛠️ Local Installation & Development
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### Prerequisite: Node.js (v18+)
 
-## Deploy on Vercel
+1.  **Clone the Repository**:
+    ```bash
+    git clone https://github.com/your-username/mezo-split.git
+    cd mezo-split
+    ```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+2.  **Install Web App Dependencies**:
+    ```bash
+    npm install
+    ```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+3.  **Run Development Server**:
+    ```bash
+    npm run dev
+    ```
+    Open `http://localhost:3000` to interact with the P2P payment dashboard.
+
+### Managing Smart Contracts
+The Solidity code and Hardhat compiler setups are located in `contracts/`:
+```bash
+cd contracts
+npm install
+npx hardhat compile
+```
+
+---
+
+## ☁️ Deploying on Vercel
+
+MezoPay is designed to be easily deployable on **Vercel** with Next.js optimization.
+
+### Step 1: Connect to Vercel
+1. Log in to your [Vercel Dashboard](https://vercel.com).
+2. Click **New Project** and import your Git Repository.
+
+### Step 2: Configure Environment Variables
+Add the following key-value pairs in the **Environment Variables** section on Vercel:
+*   `NEXT_PUBLIC_REGISTRY`: `0x8eB4E69A550Dc63BaB674469eBC516d893793de8` (UsernameRegistry address)
+*   `NEXT_PUBLIC_SPLIT`: `0x9cd6D4A92939A1b93fBb3c848c2cF3e9f09D4C10` (SplitManager address)
+
+### Step 3: Deploy
+Click **Deploy**. Vercel will automatically build the Next.js production site, compile metadata sitemaps, and serve your app globally.
+
+---
+
+## 🔗 Connect & Links
+
+*   **Official X**: [https://x.com/GetMezoPay](https://x.com/GetMezoPay)
+*   **Documentation**: [Mezo Developer Docs](https://mezo.org/docs/developers/)
+*   **Explorer**: [Mezo Explorer](https://explorer.test.mezo.org)
