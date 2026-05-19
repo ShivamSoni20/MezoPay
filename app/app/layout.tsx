@@ -1,0 +1,467 @@
+"use client";
+
+import React, { createContext, useContext, useState, useEffect } from "react";
+import { useAccount, useDisconnect, useReadContract } from "wagmi";
+import { usePathname, useRouter } from "next/navigation";
+import Link from "next/link";
+import { ConnectWallet } from "@/components/ConnectWallet";
+import { CONTRACTS, MUSD_ABI, REGISTRY_ABI } from "@/lib/contracts";
+import { parseAbi } from "viem";
+
+import { AppContext } from "./context";
+
+export default function AppLayout({ children }: { children: React.ReactNode }) {
+  const { address, isConnected } = useAccount();
+  const { disconnect } = useDisconnect();
+  const pathname = usePathname();
+  const router = useRouter();
+
+  // Toast state
+  const [toastMsg, setToastMsg] = useState("");
+  const [toastAmt, setToastAmt] = useState("");
+  const [showToastBar, setShowToastBar] = useState(false);
+
+  // Custom data states (empty by default, no fake data!)
+  const [tabs, setTabs] = useState<any[]>([]);
+  const [history, setHistory] = useState<any[]>([]);
+  const [friends, setFriends] = useState<any[]>([]);
+
+  // Read Username
+  const { data: rawUsername, refetch: refetchUsername } = useReadContract({
+    address: CONTRACTS.USERNAME_REGISTRY,
+    abi: parseAbi(REGISTRY_ABI),
+    functionName: "reverseLookup",
+    args: address ? [address] : undefined,
+    query: {
+      enabled: !!address,
+    }
+  });
+
+  // Read MUSD Balance
+  const { data: rawBalance, refetch: refetchBalance } = useReadContract({
+    address: CONTRACTS.MUSD,
+    abi: parseAbi(MUSD_ABI),
+    functionName: "balanceOf",
+    args: address ? [address] : undefined,
+    query: {
+      enabled: !!address,
+    }
+  });
+
+  const username = rawUsername ? (rawUsername as string) : null;
+  const balance = rawBalance ? (rawBalance as bigint) : BigInt(0);
+  const balanceFormatted = (Number(balance) / 1e18).toFixed(2);
+
+  const [refetchGoldskyCount, setRefetchGoldskyCount] = useState(0);
+
+  const refetchData = () => {
+    refetchUsername();
+    refetchBalance();
+    setRefetchGoldskyCount((prev) => prev + 1);
+  };
+
+  // Yield earned state & calculations
+  const [yieldEarned, setYieldEarned] = useState(0.00);
+
+  useEffect(() => {
+    if (!balance) return;
+    const balanceNum = Number(balance) / 1e18;
+    const interestPerSec = balanceNum * (0.024 / (365 * 24 * 60 * 60)); // 2.4% APR
+    
+    const interval = setInterval(() => {
+      setYieldEarned((prev) => prev + interestPerSec);
+    }, 1000);
+    
+    return () => clearInterval(interval);
+  }, [balance]);
+
+  // Compute dynamic split stats from active tabs state
+  const owedAmount = tabs
+    .filter((t) => !t.settled)
+    .reduce((sum, t) => {
+      const isCreator = t.creator?.toLowerCase() === address?.toLowerCase();
+      if (isCreator) {
+        return sum + (t.total - t.paid);
+      }
+      return sum;
+    }, 0);
+
+  const oweAmount = tabs
+    .filter((t) => !t.settled)
+    .reduce((sum, t) => {
+      const isCreator = t.creator?.toLowerCase() === address?.toLowerCase();
+      const isMember = t.members?.some((m: string) => m.toLowerCase().includes(address?.toLowerCase() || "") || m.toLowerCase() === username?.toLowerCase());
+      
+      if (!isCreator && isMember && t.paid === 0) {
+        return sum + (t.total / (t.members.length || 1));
+      }
+      return sum;
+    }, 0);
+
+  const showToast = (message: string, amount?: string) => {
+    setToastMsg(message);
+    setToastAmt(amount || "");
+    setShowToastBar(true);
+  };
+
+  useEffect(() => {
+    if (showToastBar) {
+      const timer = setTimeout(() => setShowToastBar(false), 3200);
+      return () => clearTimeout(timer);
+    }
+  }, [showToastBar]);
+
+  // Redirect to landing page if wallet is disconnected
+  useEffect(() => {
+    if (!isConnected || !address) {
+      router.push("/");
+    }
+  }, [isConnected, address, router]);
+
+  // Load real-time indexed records from Goldsky
+  useEffect(() => {
+    if (!address) return;
+
+    const fetchGoldskyData = async () => {
+      try {
+        const query = `
+          query GetUserData($user: String!) {
+            users(where: { id: $user }) {
+              id
+              username
+              createdAt
+            }
+            tabs(first: 100, orderBy: createdAt, orderDirection: desc) {
+              id
+              creator
+              title
+              members
+              shares
+              settled
+              paidCount
+              createdAt
+            }
+            tabPayments(where: { member: $user }) {
+              id
+              amount
+              timestamp
+              tab {
+                id
+                title
+                creator
+              }
+            }
+          }
+        `;
+
+        const response = await fetch("https://api.goldsky.com/api/public/project_cmpauvflbxl4l01tgc2cgakep/subgraphs/mezosplit/v1/gn", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            query,
+            variables: {
+              user: address.toLowerCase(),
+            },
+          }),
+        });
+
+        const result = await response.json();
+        if (result.data) {
+          const { tabs: fetchedTabs, tabPayments } = result.data;
+          
+          if (fetchedTabs && fetchedTabs.length > 0) {
+            // Filter tabs where user is either creator OR a member
+            const relevantTabs = fetchedTabs.filter((t: any) => {
+              const isCreator = t.creator.toLowerCase() === address.toLowerCase();
+              const isMember = t.members.some((m: string) => m.toLowerCase() === address.toLowerCase() || (username && m.toLowerCase() === username.toLowerCase()));
+              return isCreator || isMember;
+            });
+
+            const formattedTabs = relevantTabs.map((t: any) => {
+              const totalAmount = Number(t.shares.reduce((a: string, b: string) => BigInt(a) + BigInt(b), BigInt(0))) / 1e18;
+              const isCreator = t.creator.toLowerCase() === address.toLowerCase();
+              
+              let userPaid = 0;
+              if (t.settled) {
+                userPaid = totalAmount;
+              } else if (tabPayments) {
+                const paidRecord = tabPayments.find((p: any) => p.tab.id === t.id);
+                if (paidRecord) {
+                  userPaid = Number(paidRecord.amount) / 1e18;
+                }
+              }
+
+              return {
+                id: t.id,
+                title: t.title,
+                creator: t.creator,
+                members: t.members.map((m: string) => m.startsWith("0x") ? (m.slice(0, 6) + "..." + m.slice(-4)) : m),
+                total: totalAmount,
+                paid: userPaid,
+                settled: t.settled,
+              };
+            });
+
+            setTabs((prev) => {
+              const ids = new Set(formattedTabs.map((t: any) => t.id));
+              return [...formattedTabs, ...prev.filter((t) => !ids.has(t.id))];
+            });
+          }
+
+          const dynamicHistory: any[] = [];
+          
+          if (fetchedTabs) {
+            const relevantTabs = fetchedTabs.filter((t: any) => {
+              const isCreator = t.creator.toLowerCase() === address.toLowerCase();
+              const isMember = t.members.some((m: string) => m.toLowerCase() === address.toLowerCase() || (username && m.toLowerCase() === username.toLowerCase()));
+              return isCreator || isMember;
+            });
+
+            relevantTabs.forEach((t: any) => {
+              const isCreator = t.creator.toLowerCase() === address.toLowerCase();
+              dynamicHistory.push({
+                id: `goldsky-tab-${t.id}`,
+                type: "split",
+                title: `Split: ${t.title}`,
+                detail: isCreator ? "Group Tab Created" : "Invited to Bill Split",
+                amount: isCreator ? (Number(t.shares.reduce((a: string, b: string) => BigInt(a) + BigInt(b), BigInt(0))) / 1e18) : -(Number(t.shares[0] || 0) / 1e18),
+                date: new Date(Number(t.createdAt) * 1000).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+                hash: t.id,
+              });
+            });
+          }
+
+          if (tabPayments) {
+            tabPayments.forEach((p: any) => {
+              dynamicHistory.push({
+                id: `goldsky-pay-${p.id}`,
+                type: "sent",
+                title: `Paid for Split: ${p.tab.title}`,
+                detail: `Sent to ${p.tab.creator.slice(0, 6)}...${p.tab.creator.slice(-4)}`,
+                amount: -(Number(p.amount) / 1e18),
+                date: new Date(Number(p.timestamp) * 1000).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+                hash: p.id.split("-")[0],
+              });
+            });
+          }
+
+          if (dynamicHistory.length > 0) {
+            setHistory((prev) => {
+              const ids = new Set(dynamicHistory.map((h) => h.id));
+              return [...dynamicHistory, ...prev.filter((h) => !ids.has(h.id))];
+            });
+          }
+        }
+      } catch (err) {
+        console.error("Goldsky indexing fetch failed:", err);
+      }
+    };
+
+    fetchGoldskyData();
+  }, [address, refetchGoldskyCount]);
+
+  // Loading state while redirecting
+  if (!isConnected || !address) {
+    return (
+      <div className="flex h-screen w-screen items-center justify-center bg-white">
+        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-orange-500"></div>
+      </div>
+    );
+  }
+
+  // Sidebar items
+  const menuItems = [
+    { label: "Dashboard", icon: "🏠", path: "/app/dashboard" },
+    { label: "Send MUSD", icon: "↑", path: "/app/send" },
+    { label: "Request", icon: "↓", path: "/app/request" },
+    { label: "Split Tab", icon: "⚖️", path: "/app/split" },
+    { label: "Earn Yield", icon: "📈", path: "/app/earn", badge: "Live", badgeClass: "green" },
+    { label: "Virtual Card", icon: "💳", path: "/app/card" },
+    { label: "History", icon: "📋", path: "/app/history" },
+    { label: "Friends", icon: "👥", path: "/app/friends" },
+    { label: "Settings", icon: "⚙️", path: "/app/settings" },
+  ];
+
+  return (
+    <AppContext.Provider
+      value={{
+        address,
+        username,
+        balance,
+        balanceFormatted,
+        refetchData,
+        showToast,
+        tabs,
+        setTabs,
+        history,
+        setHistory,
+        friends,
+        setFriends,
+        yieldEarned,
+        owedAmount,
+        oweAmount,
+      }}
+    >
+      <div className="flex min-h-screen">
+        {/* SIDEBAR */}
+        <aside className="sidebar">
+          <div className="s-logo">
+            MezoPay<span>.</span>
+          </div>
+          <div className="s-user">
+            <div className="s-av">
+              {username ? username[0].toUpperCase() : (address ? address.slice(2, 4).toUpperCase() : "M")}
+            </div>
+            <div>
+              <div className="s-name" style={{ color: "var(--orange)", fontWeight: 800 }}>
+                {username ? `@${username}` : "No Username"}
+              </div>
+              <div className="s-addr" style={{ fontSize: "0.72rem", color: "var(--gray)", marginTop: "2px", fontFamily: "monospace" }}>
+                {address ? `${address.slice(0, 6)}...${address.slice(-4)}` : ""}
+              </div>
+              <div className="s-bal" style={{ marginTop: "4px" }}>${balanceFormatted} MUSD</div>
+            </div>
+          </div>
+          <nav className="s-nav">
+            <div className="s-sec-lbl">Main</div>
+            {menuItems.slice(0, 4).map((item) => (
+              <Link
+                key={item.path}
+                href={item.path}
+                className={`nav-item ${pathname === item.path ? "active" : ""}`}
+              >
+                <span className="nav-icon">{item.icon}</span>
+                {item.label}
+              </Link>
+            ))}
+
+            <div className="s-sec-lbl" style={{ marginTop: "8px" }}>
+              Finance
+            </div>
+            {menuItems.slice(4, 6).map((item) => (
+              <Link
+                key={item.path}
+                href={item.path}
+                className={`nav-item ${pathname === item.path ? "active" : ""}`}
+              >
+                <span className="nav-icon">{item.icon}</span>
+                {item.label}
+                {item.badge && (
+                  <span className={`n-badge ${item.badgeClass === "green" ? "green" : ""}`}>
+                    {item.badge}
+                  </span>
+                )}
+              </Link>
+            ))}
+
+            <div className="s-sec-lbl" style={{ marginTop: "8px" }}>
+              Activity
+            </div>
+            {menuItems.slice(6, 8).map((item) => (
+              <Link
+                key={item.path}
+                href={item.path}
+                className={`nav-item ${pathname === item.path ? "active" : ""}`}
+              >
+                <span className="nav-icon">{item.icon}</span>
+                {item.label}
+              </Link>
+            ))}
+
+            <div className="s-sec-lbl" style={{ marginTop: "8px" }}>
+              Account
+            </div>
+            {menuItems.slice(8).map((item) => (
+              <Link
+                key={item.path}
+                href={item.path}
+                className={`nav-item ${pathname === item.path ? "active" : ""}`}
+              >
+                <span className="nav-icon">{item.icon}</span>
+                {item.label}
+              </Link>
+            ))}
+          </nav>
+          <div className="s-footer" style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+            <div className="net-chip">
+              <span className="net-dot"></span>Mezo Testnet · 31611
+            </div>
+            <button
+              onClick={() => {
+                disconnect();
+                router.push("/");
+              }}
+              style={{
+                width: "100%",
+                background: "var(--red-light)",
+                border: "1px solid rgba(239, 68, 68, 0.15)",
+                borderRadius: "9px",
+                padding: "8px 12px",
+                fontSize: "0.78rem",
+                fontWeight: 700,
+                color: "var(--red)",
+                cursor: "pointer",
+                textAlign: "center",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "6px",
+                transition: "all 0.15s"
+              }}
+              onMouseOver={(e) => {
+                e.currentTarget.style.background = "#FEE2E2";
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.background = "var(--red-light)";
+              }}
+            >
+              🚪 Disconnect Wallet
+            </button>
+          </div>
+        </aside>
+
+        {/* MAIN SHELL */}
+        <main className="main">
+          <div className="topbar">
+            <div className="tb-title">
+              {menuItems.find((item) => item.path === pathname)?.label || "Dashboard"}
+            </div>
+            <div className="tb-right"></div>
+          </div>
+
+          {/* PAGE CONTENT */}
+          <div className="page">{children}</div>
+        </main>
+
+        {/* MOBILE BOTTOM NAVIGATION */}
+        <div className="mobile-bottom-nav" style={{ display: "none" }}>
+          {menuItems.slice(0, 6).map((item) => (
+            <Link
+              key={item.path}
+              href={item.path}
+              className={`m-nav-item ${pathname === item.path ? "active" : ""}`}
+            >
+              <span className="m-icon">{item.icon}</span>
+              <span>{item.label.split(" ")[0]}</span>
+            </Link>
+          ))}
+          <Link
+            href="/app/settings"
+            className={`m-nav-item ${pathname === "/app/settings" ? "active" : ""}`}
+          >
+            <span className="m-icon">⚙️</span>
+            <span>Settings</span>
+          </Link>
+        </div>
+
+        {/* TOAST SYSTEM */}
+        <div id="toast" className={showToastBar ? "show" : ""}>
+          <span id="toastMsg">{toastMsg}</span>
+          {toastAmt && <span className="t-amt">{toastAmt}</span>}
+        </div>
+      </div>
+    </AppContext.Provider>
+  );
+}
