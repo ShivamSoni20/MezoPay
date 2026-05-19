@@ -522,7 +522,7 @@ export default function Home() {
 
         .steps {
           display: grid;
-          grid-template-columns: repeat(3, 1fr);
+          grid-template-columns: repeat(4, 1fr);
           gap: 22px;
         }
 
@@ -1074,31 +1074,30 @@ export default function Home() {
 
         <section className="how" id="how">
           <div className="sec-lbl">How it works</div>
-          <div className="sec-title">Four steps. Zero crypto.</div>
+          <div className="sec-title">Four steps. Zero complexity.</div>
           <div className="sec-sub">
-            MezoPay abstracts every piece of blockchain plumbing. Users see @usernames and dollar amounts — nothing else.
+            Connect, claim, send, split — all on Mezo. No addresses, no gas popups, no jargon.
           </div>
           <div className="steps">
             <div className="step-card">
               <div className="step-num">01</div>
-              <h3>Sign up with @username</h3>
-              <p>
-                Mezo Passport (@mezo-org/passport v0.1.0) creates your wallet silently via email or social. No seed phrase. No gas setup. UsernameRegistry.sol maps your @handle on-chain.
-              </p>
+              <h3>Connect & Claim @handle</h3>
+              <p>One-click RainbowKit login. Register your @username on-chain via UsernameRegistry.sol — instant, permanent.</p>
             </div>
             <div className="step-card">
               <div className="step-num">02</div>
-              <h3>Send by @handle, gasless</h3>
-              <p>
-                Type @friend, enter dollar amount. MUSD is permit2 + EIP-2612 — sender signs off-chain, receiver pays zero gas. No on-chain approval transaction ever needed.
-              </p>
+              <h3>Send MUSD by @name</h3>
+              <p>Type @friend, enter amount, done. Gasless EIP-712 permit — no approvals, no gas for receiver.</p>
             </div>
             <div className="step-card">
               <div className="step-num">03</div>
-              <h3>Split tabs in one transaction</h3>
-              <p>
-                Add people, set total. SplitManager.sol computes shares and batch-settles all members in a single on-chain tx. Goldsky indexes the Transfer events for your live feed.
-              </p>
+              <h3>Split Bills Instantly</h3>
+              <p>Add friends, set total. SplitManager.sol splits shares and settles all members in a single transaction.</p>
+            </div>
+            <div className="step-card">
+              <div className="step-num">04</div>
+              <h3>Earn Yield & Track</h3>
+              <p>Idle MUSD earns 2.4% APR automatically. Goldsky subgraph powers your real-time activity feed.</p>
             </div>
           </div>
         </section>
