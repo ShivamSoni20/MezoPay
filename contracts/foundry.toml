@@ -1,0 +1,14 @@
+[profile.default]
+src = "src"
+out = "out"
+libs = ["lib", "node_modules"]
+evm_version = "london"
+solc_version = "0.8.28"
+remappings = [
+  "@openzeppelin/=node_modules/@openzeppelin/",
+  "forge-std/=lib/forge-std/src/"
+]
+
+[rpc_endpoints]
+mezotestnet = "https://rpc.test.mezo.org"
+mezomainnet = "https://mezo.drpc.org"

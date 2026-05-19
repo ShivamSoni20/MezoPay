@@ -1,0 +1,18 @@
+# Dependencies
+node_modules/
+
+# hardhat / foundry compilation outputs
+artifacts/
+cache/
+out/
+.hardhat-appdata/
+
+# environment variables containing private keys
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# flattened contract files
+*_flat.sol
