@@ -1,0 +1,25 @@
+type User @entity {
+  id: ID! # Wallet address
+  username: String
+  createdAt: BigInt!
+}
+
+type Tab @entity {
+  id: ID! # tabId bytes32 hex
+  creator: Bytes!
+  title: String!
+  members: [Bytes!]!
+  shares: [BigInt!]!
+  settled: Boolean!
+  paidCount: BigInt!
+  createdAt: BigInt!
+  payments: [TabPayment!]! @derivedFrom(field: "tab")
+}
+
+type TabPayment @entity {
+  id: ID! # tabId + member address
+  tab: Tab!
+  member: Bytes!
+  amount: BigInt!
+  timestamp: BigInt!
+}
