@@ -1,119 +1,235 @@
-# ⚖️ MezoPay
+<div align="center">
 
-**MezoPay** is a decentralized, gasless, peer-to-peer payment and bill-splitting platform built on **Mezo** primitives. It functions like a Web3 version of Venmo, allowing users to register case-insensitive @handles, send gasless MUSD stablecoins via EIP-2612 `permit2` signatures, and split group tabs natively in a single on-chain transaction.
+# MezoPay
+
+**Bitcoin-backed MUSD payments for everyday life — send, request, and split with @username only.**
+
+[![Mezo](https://img.shields.io/badge/Mezo-Testnet-F97316?style=for-the-badge&logo=bitcoin&logoColor=white)](https://mezo.org)
+[![Track](https://img.shields.io/badge/Hackathon-Supernormal%20dApps%20(MUSD)-22C55E?style=for-the-badge)](https://supernormal.foundation)
+[![MUSD](https://img.shields.io/badge/Currency-MUSD-1A1108?style=for-the-badge)](https://mezo.org/docs/developers/musd)
+[![Chain](https://img.shields.io/badge/Chain-31611-6B7280?style=for-the-badge)](https://explorer.test.mezo.org)
+[![Next.js](https://img.shields.io/badge/Next.js-14-000000?style=for-the-badge&logo=next.js&logoColor=white)](https://nextjs.org)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org)
+[![XMTP](https://img.shields.io/badge/XMTP-v7-3B82F6?style=for-the-badge)](https://xmtp.org)
+[![License](https://img.shields.io/badge/License-MIT-8B5CF6?style=for-the-badge)](LICENSE)
+
+[Live Demo](#-quick-start) · [Architecture](#-architecture) · [Contracts](./contracts/README.md) · [Mezo Docs](https://mezo.org/docs/developers/) · [Supernormal](https://supernormal.foundation)
+
+</div>
 
 ---
 
-## 🚀 Key Features
+## Overview
 
-*   **Custom Profiles (@Usernames)**: Claim a unique, case-insensitive on-chain profile handle mapped 1-to-1 to your wallet via our `UsernameRegistry` contract.
-*   **Gasless MUSD Transfers**: Send payments directly to handles. Under the hood, MezoSplit leverages EIP-2612 signatures — the sender signs a transaction off-chain, and the receiver pays zero gas.
-*   **On-Chain Bill Splitting**: Create group tabs, calculate splits, and batch-settle balances in a single transaction with the `SplitManager` contract.
-*   **Rich SEO & Custom Sharing**: Dynamic sitemaps, rich Open Graph metadata, and optimized sharing configurations for social links.
+**MezoPay** is a consumer payments app built for the **Supernormal dApps — MUSD Track** at the Mezo hackathon. It turns Bitcoin-backed **MUSD** into something people actually use: pay a friend, request dinner money, or split a group tab — all with `@username`, not hex addresses.
+
+Mezo lets Bitcoin holders mint **MUSD** against BTC collateral at transparent, onchain terms. MezoPay sits on top of that stack as the **payments layer**: stable, fast, Bitcoin-backed money with human-readable handles and optional **2.4% APR** yield context on idle MUSD.
+
+> **Hackathon focus:** Self-service banking on Bitcoin rails — MUSD as the primary medium of exchange for real-world payment flows (P2P send, requests, splits, merchant-ready primitives).
 
 ---
 
-## 🗺️ System Architecture
+## Why Mezo + MUSD
 
-Below is the interaction flow between the Frontend app, Mezo Passport, and our deployed smart contracts:
+| Mezo principle | How MezoPay applies it |
+|----------------|------------------------|
+| Bitcoin-backed stablecoin | All flows settle in **MUSD** on Mezo testnet |
+| User-controlled, onchain | Transfers & splits via smart contracts; positions auditable on explorer |
+| Productive capital | Dashboard surfaces live yield accrual (Mezo Earn narrative) |
+| No selling BTC | Spend/split/request in MUSD while keeping BTC exposure via Mezo’s model |
+| Consumer-first | `@username` registry, gasless-friendly permits, social wallet onboarding |
+
+---
+
+## Features
+
+| Feature | Description |
+|---------|-------------|
+| **Quick Send** | Send MUSD to `@username` or `0x` address via onchain `transfer` |
+| **Payment Requests** | Request MUSD with **XMTP** instant notifications, or share a payment link fallback |
+| **Group Split Tabs** | Onchain `SplitManager` — create tabs, track shares, settle with MUSD (+ EIP-2612 permit path) |
+| **@username Registry** | `UsernameRegistry.sol` maps handles → wallets (3–20 chars, lowercase) |
+| **Live Activity** | Goldsky subgraph indexes transfers, tabs, and registry events |
+| **Earn & Card (UI)** | Mezo Earn APR ticker + virtual card shell for hackathon demo narrative |
+| **Wallet UX** | [@mezo-org/passport](https://www.npmjs.com/package/@mezo-org/passport) + RainbowKit — email/social-friendly onboarding |
+
+---
+
+## Architecture
 
 ```mermaid
+%%{init: {'theme': 'base', 'themeVariables': {'fontFamily': 'DM Sans, sans-serif', 'primaryColor': '#FFF7ED', 'primaryTextColor': '#1A1108', 'primaryBorderColor': '#F97316', 'secondaryColor': '#F0FDF4', 'secondaryBorderColor': '#22C55E', 'tertiaryColor': '#EFF6FF', 'tertiaryBorderColor': '#3B82F6', 'lineColor': '#F97316'}}}%%
+flowchart TB
+    subgraph users["👤 Users"]
+        U1[Sender]
+        U2[Recipient]
+    end
+
+    subgraph frontend["🟠 MezoPay Frontend — Next.js 14"]
+        UI[Landing + App Shell]
+        DASH[Dashboard · Send · Request · Split]
+        XMTP_UI[XMTP Enable + Request Stream]
+        WALLET[Mezo Passport + RainbowKit + Wagmi]
+    end
+
+    subgraph offchain["🔵 Real-time Layer"]
+        XMTP[XMTP Browser SDK<br/>Encrypted payment requests]
+        GOLDSKY[Goldsky Subgraph<br/>GraphQL indexer]
+        LS[(Browser localStorage<br/>Request state)]
+    end
+
+    subgraph mezo["🟢 Mezo Testnet — Chain 31611"]
+        MUSD[(MUSD ERC-20<br/>0x1189…c503)]
+        REG[UsernameRegistry]
+        SPLIT[SplitManager]
+    end
+
+    U1 --> UI
+    U2 --> UI
+    UI --> DASH
+    DASH --> WALLET
+    DASH --> XMTP_UI
+    WALLET --> MUSD
+    WALLET --> REG
+    WALLET --> SPLIT
+    XMTP_UI --> XMTP
+    XMTP --> LS
+    DASH --> GOLDSKY
+    GOLDSKY --> MUSD
+    GOLDSKY --> REG
+    GOLDSKY --> SPLIT
+    SPLIT --> MUSD
+    SPLIT --> REG
+    XMTP -.->|mezopay_request / settled| U2
+
+    classDef mezo fill:#F0FDF4,stroke:#22C55E,stroke-width:2px,color:#1A1108
+    classDef front fill:#FFF7ED,stroke:#F97316,stroke-width:2px,color:#1A1108
+    classDef rt fill:#EFF6FF,stroke:#3B82F6,stroke-width:2px,color:#1A1108
+    class MUSD,REG,SPLIT mezo
+    class UI,DASH,XMTP_UI,WALLET front
+    class XMTP,GOLDSKY,LS rt
+```
+
+### Request notification flow
+
+```mermaid
+%%{init: {'theme': 'base', 'themeVariables': {'actorBkg': '#FFF7ED', 'actorBorder': '#F97316', 'actorTextColor': '#1A1108', 'signalColor': '#F97316', 'noteBkgColor': '#F0FDF4', 'noteBorderColor': '#22C55E'}}}%%
 sequenceDiagram
     autonumber
-    actor Alice as Alice (@alice)
-    actor Bob as Bob (@bob)
-    participant App as MezoSplit Web UI
-    participant Reg as UsernameRegistry.sol
-    participant Split as SplitManager.sol
-    participant MUSD as MUSD Contract
+    participant Alice as Sender
+    participant App as MezoPay
+    participant XMTP as XMTP Network
+    participant Bob as Recipient
+    participant Chain as Mezo + MUSD
 
-    Note over Alice, App: 1. Onboard & Resolve
-    Alice->>App: Connects Mezo Passport Wallet
-    App->>Reg: reverseLookup(alice_address)
-    Reg-->>App: Returns "@alice"
-    
-    Note over Alice, Bob: 2. P2P Gasless Send Flow
-    Alice->>App: Sends $10 to "@bob"
-    App->>Reg: resolve("bob")
-    Reg-->>App: Returns Bob's Wallet Address
-    App->>Alice: Prompts signature (EIP-2612 Permit)
-    Alice-->>App: Signs off-chain permit
-    App->>MUSD: Executes transferFrom with Permit
-    MUSD-->>Bob: Delivers $10 MUSD (Gas paid by Receiver/Relayer)
-
-    Note over Alice, Split: 3. Group Split Flow
-    Alice->>App: Creates group tab "Friday Pizza Night"
-    App->>Split: createTab("Pizza", [Alice, Bob], [share1, share2])
-    Split-->>App: Emits TabCreated (returns bytes32 tabId)
-    Alice->>App: Triggers "Settle Tab"
-    App->>Split: settleTab(tabId)
-    Split->>MUSD: Batch transfers from members to Creator
-    MUSD-->>Alice: Settles funds
+    Alice->>App: Request $5 from @bob
+    App->>Chain: Resolve @bob via UsernameRegistry
+    App->>XMTP: Encrypted mezopay_request JSON
+    XMTP-->>Bob: Stream → toast + pending list
+    Bob->>App: Pay request
+    App->>Chain: MUSD.transfer to Alice
+    App->>XMTP: mezopay_payment_completed
+    XMTP-->>Alice: Settlement notification
 ```
 
 ---
 
-## 📍 Smart Contract Configurations
+## Tech stack
 
-The contracts are deployed on the **Mezo Testnet (Chain ID: 31611)**:
-
-*   **MUSD (Testnet Token)**: [`0x118917a40FAF1CD7a13dB0Ef56C86De7973Ac503`](https://explorer.test.mezo.org/token/0x118917a40FAF1CD7a13dB0Ef56C86De7973Ac503)
-*   **UsernameRegistry**: [`0x8eB4E69A550Dc63BaB674469eBC516d893793de8`](https://explorer.test.mezo.org/address/0x8eB4E69A550Dc63BaB674469eBC516d893793de8#code) *(Fully Verified)*
-*   **SplitManager**: [`0x9cd6D4A92939A1b93fBb3c848c2cF3e9f09D4C10`](https://explorer.test.mezo.org/address/0x9cd6D4A92939A1b93fBb3c848c2cF3e9f09D4C10#code) *(Fully Verified)*
+| Layer | Technology |
+|-------|------------|
+| Frontend | Next.js 14, React 18, TypeScript, Tailwind CSS 4 |
+| Wallet | Wagmi 2, Viem, RainbowKit, `@mezo-org/passport` |
+| Messaging | `@xmtp/browser-sdk` v7 (MLS, opt-in enable + silent resume) |
+| Indexing | Goldsky subgraph (`mezopay` on `mezo-testnet`) |
+| Contracts | Solidity 0.8.28, Foundry, OpenZeppelin (see [contracts/README.md](./contracts/README.md)) |
 
 ---
 
-## 🛠️ Local Installation & Development
+## Repository layout
 
-### Prerequisite: Node.js (v18+)
+```
+apps/web/
+├── app/                 # Next.js App Router (landing + /app/*)
+├── components/          # Wallet providers, ConnectWallet
+├── contracts/           # Foundry — UsernameRegistry, SplitManager
+├── lib/                 # ABIs, XMTP helpers, request storage
+├── subgraph/            # Goldsky / The Graph mappings
+└── public/
+```
 
-1.  **Clone the Repository**:
-    ```bash
-    git clone https://github.com/your-username/mezo-split.git
-    cd mezo-split
-    ```
+---
 
-2.  **Install Web App Dependencies**:
-    ```bash
-    npm install
-    ```
+## Quick start
 
-3.  **Run Development Server**:
-    ```bash
-    npm run dev
-    ```
-    Open `http://localhost:3000` to interact with the P2P payment dashboard.
+### Prerequisites
 
-### Managing Smart Contracts
-The Solidity code and Hardhat compiler setups are located in `contracts/`:
+- Node.js 20+
+- A [WalletConnect](https://cloud.reown.com) project ID (allowlist `http://localhost:3000` and your deploy URL)
+- Mezo testnet MUSD ([faucet](https://faucet.test.mezo.org))
+
+### 1. Install & configure
+
 ```bash
-cd contracts
 npm install
-npx hardhat compile
+cp .env.example .env.local
 ```
 
----
+Open `.env.local` and set at least `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID` and `NEXT_PUBLIC_GOLDSKY_URL` (after you deploy the subgraph). See [`.env.example`](.env.example) for all variables and comments.
 
-## ☁️ Deploying on Vercel
+### 2. Run the app
 
-MezoPay is designed to be easily deployable on **Vercel** with Next.js optimization.
+```bash
+npm run dev
+```
 
-### Step 1: Connect to Vercel
-1. Log in to your [Vercel Dashboard](https://vercel.com).
-2. Click **New Project** and import your Git Repository.
+Open [http://localhost:3000](http://localhost:3000) → connect wallet → enable **XMTP Notifications** in the sidebar (one-time MetaMask signature).
 
-### Step 2: Configure Environment Variables
-Add the following key-value pairs in the **Environment Variables** section on Vercel:
-*   `NEXT_PUBLIC_REGISTRY`: `0x8eB4E69A550Dc63BaB674469eBC516d893793de8` (UsernameRegistry address)
-*   `NEXT_PUBLIC_SPLIT`: `0x9cd6D4A92939A1b93fBb3c848c2cF3e9f09D4C10` (SplitManager address)
+### 3. Deploy contracts (optional)
 
-### Step 3: Deploy
-Click **Deploy**. Vercel will automatically build the Next.js production site, compile metadata sitemaps, and serve your app globally.
+See [contracts/README.md](./contracts/README.md).
 
 ---
 
-## 🔗 Connect & Links
+## Testnet deployment
 
-*   **Official X**: [https://x.com/GetMezoPay](https://x.com/GetMezoPay)
-*   **Documentation**: [Mezo Developer Docs](https://mezo.org/docs/developers/)
-*   **Explorer**: [Mezo Explorer](https://explorer.test.mezo.org)
+| Resource | URL |
+|----------|-----|
+| RPC | `https://rpc.test.mezo.org` |
+| Chain ID | `31611` |
+| Explorer | [explorer.test.mezo.org](https://explorer.test.mezo.org) |
+| Faucet | [faucet.test.mezo.org](https://faucet.test.mezo.org) |
+
+| Contract | Address |
+|----------|---------|
+| MUSD (official testnet) | `0x118917a40FAF1CD7a13dB0Ef56C86De7973Ac503` |
+| UsernameRegistry | `0x8eB4E69A550Dc63BaB674469eBC516d893793de8` |
+| SplitManager | `0x9cd6D4A92939A1b93fBb3c848c2cF3e9f09D4C10` |
+
+---
+
+## Useful links
+
+- [Mezo Documentation](https://mezo.org/docs/developers/)
+- [What is MUSD?](https://mezo.org/docs/developers/musd)
+- [Introducing Mezo Earn](https://mezo.org/docs/developers/earn)
+- [Mezo GitHub](https://github.com/mezo-org)
+- [@mezo-org/passport on npm](https://www.npmjs.com/package/@mezo-org/passport)
+- [Supernormal Foundation](https://supernormal.foundation)
+- [XMTP Docs](https://docs.xmtp.org)
+
+---
+
+## Team & license
+
+Built for the **Mezo × Supernormal** hackathon — original work developed during the event.
+
+MIT © 2026 MezoPay Contributors — see [LICENSE](LICENSE).
+
+---
+
+<div align="center">
+
+**Bitcoin should feel as normal as using your phone. MezoPay is a step toward that with MUSD.**
+
+</div>
