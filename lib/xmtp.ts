@@ -2,13 +2,16 @@ import {
   Client,
   IdentifierKind,
   createBackend,
+  getInboxIdForIdentifier,
   isText,
+  type ClientOptions,
   type DecodedMessage,
+  type Identifier,
   type Signer,
   type XmtpEnv,
 } from "@xmtp/browser-sdk";
 import type { WalletClient } from "viem";
-import { hexToBytes } from "viem";
+import { hexToBytes, isHex } from "viem";
 import {
   loadRequests,
   parseMezoPayMessage,
@@ -36,6 +39,83 @@ export function getXmtpEnv(): XmtpEnv {
     return env;
   }
   return "dev";
+}
+
+function isInstallationLimitError(err: unknown): boolean {
+  const msg = err instanceof Error ? err.message : String(err);
+  return (
+    msg.includes("10/10 installations") ||
+    msg.includes("revoke existing installations")
+  );
+}
+
+async function revokeStaleInstallations(
+  signer: Signer,
+  identifier: Identifier,
+): Promise<void> {
+  const backend = await createBackend({ env: getXmtpEnv() });
+  const inboxId = await getInboxIdForIdentifier(backend, identifier);
+  if (!inboxId) return;
+
+  const states = await Client.fetchInboxStates([inboxId], backend);
+  const installations = states[0]?.installations ?? [];
+  if (installations.length === 0) return;
+
+  const installationIds = installations.map((inst) => {
+    const id = inst.id as string | Uint8Array;
+    if (typeof id === "string" && isHex(id)) {
+      return hexToBytes(id);
+    }
+    if (typeof id === "object" && id !== null && "byteLength" in id) {
+      return id as Uint8Array;
+    }
+    return new TextEncoder().encode(String(id));
+  });
+
+  await Client.revokeInstallations(signer, inboxId, installationIds, backend);
+}
+
+/** Resumes an existing XMTP inbox from this browser (no MetaMask prompt). */
+export async function resumeXmtpClient(
+  signer: Signer,
+): Promise<Client<unknown> | null> {
+  const options = { env: getXmtpEnv() } as ClientOptions;
+  const identifier = await Promise.resolve(signer.getIdentifier());
+
+  try {
+    const client = await Client.build(identifier, options);
+    if (await client.isRegistered()) {
+      return client;
+    }
+  } catch {
+    // No local inbox for this wallet in this browser yet.
+  }
+  return null;
+}
+
+/** Registers XMTP inbox (MetaMask signature required on first enable). */
+export async function registerXmtpClient(
+  signer: Signer,
+): Promise<Client<unknown>> {
+  const options = { env: getXmtpEnv() } as ClientOptions;
+  const identifier = await Promise.resolve(signer.getIdentifier());
+
+  try {
+    return await Client.create(signer, options);
+  } catch (err) {
+    if (!isInstallationLimitError(err)) throw err;
+    await revokeStaleInstallations(signer, identifier);
+    return await Client.create(signer, options);
+  }
+}
+
+/** @deprecated Use resumeXmtpClient or registerXmtpClient */
+export async function createXmtpClient(
+  signer: Signer,
+): Promise<Client<unknown>> {
+  const resumed = await resumeXmtpClient(signer);
+  if (resumed) return resumed;
+  return registerXmtpClient(signer);
 }
 
 export function buildSignerFromWalletClient(walletClient: WalletClient): Signer {

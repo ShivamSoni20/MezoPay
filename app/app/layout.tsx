@@ -5,18 +5,18 @@ import { useAccount, useDisconnect, useReadContract, usePublicClient, useWalletC
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
-  Client,
   ConsentState,
   type AsyncStreamProxy,
-  type ClientOptions,
+  type Client,
   type DecodedMessage,
 } from "@xmtp/browser-sdk";
 import { CONTRACTS, MUSD_ABI, REGISTRY_ABI } from "@/lib/contracts";
 import { parseAbi } from "viem";
 import {
   buildSignerFromWalletClient,
-  getXmtpEnv,
   handleIncomingMessage,
+  registerXmtpClient,
+  resumeXmtpClient,
   sendDmJson,
 } from "@/lib/xmtp";
 
@@ -167,21 +167,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     initInFlightRef.current = false;
   }, []);
 
-  const initXmtp = useCallback(async () => {
-    if (!address || !walletClient) return;
-    if (initInFlightRef.current) return;
-    if (xmtpClientRef.current) return;
-
-    initInFlightRef.current = true;
-    setXmtpStatus("connecting");
-
-    try {
-      await cleanupXmtp();
-
-      const signer = buildSignerFromWalletClient(walletClient);
-      const client = await Client.create(signer, {
-        env: getXmtpEnv(),
-      } as ClientOptions);
+  const attachXmtpClient = useCallback(
+    async (client: Client<unknown>, silent: boolean) => {
       await client.conversations.syncAll([ConsentState.Allowed]);
 
       xmtpClientRef.current = client;
@@ -210,25 +197,96 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         },
       });
       messageStreamRef.current = stream;
+
+      if (!silent) {
+        showToast("XMTP notifications enabled");
+      }
+    },
+    [address, refreshRequests],
+  );
+
+  const resumeXmtp = useCallback(async (): Promise<boolean> => {
+    if (!address || !walletClient || initInFlightRef.current || xmtpClientRef.current) {
+      return !!xmtpClientRef.current;
+    }
+
+    initInFlightRef.current = true;
+    setXmtpStatus("connecting");
+
+    try {
+      const signer = buildSignerFromWalletClient(walletClient);
+      const client = await resumeXmtpClient(signer);
+      if (!client) {
+        setXmtpStatus("disconnected");
+        return false;
+      }
+      await attachXmtpClient(client, true);
+      return true;
+    } catch (err) {
+      console.error("XMTP resume failed:", err);
+      setXmtpStatus("disconnected");
+      return false;
+    } finally {
+      initInFlightRef.current = false;
+    }
+  }, [address, walletClient, attachXmtpClient]);
+
+  const initXmtp = useCallback(async (): Promise<boolean> => {
+    if (!address || !walletClient) {
+      showToast("Connect your wallet first");
+      return false;
+    }
+    if (initInFlightRef.current) return false;
+    if (xmtpClientRef.current) {
+      showToast("XMTP notifications already enabled");
+      return true;
+    }
+
+    initInFlightRef.current = true;
+    setXmtpStatus("connecting");
+
+    try {
+      if (messageStreamRef.current) {
+        try {
+          await messageStreamRef.current.return();
+        } catch {
+          // ignore
+        }
+        messageStreamRef.current = null;
+      }
+
+      const signer = buildSignerFromWalletClient(walletClient);
+      const resumed = await resumeXmtpClient(signer);
+      if (!resumed) {
+        showToast("Approve the XMTP signature in MetaMask");
+      }
+      const client = resumed ?? (await registerXmtpClient(signer));
+      await attachXmtpClient(client, !!resumed);
+      return true;
     } catch (err) {
       console.error("XMTP init failed:", err);
       setXmtpStatus("error");
       xmtpClientRef.current = null;
       setXmtpClient(null);
+      const msg = err instanceof Error ? err.message : "XMTP setup failed";
+      showToast(
+        msg.includes("10/10")
+          ? "XMTP installation limit reached — click Enable again to reset old devices"
+          : msg.slice(0, 120),
+      );
+      return false;
     } finally {
       initInFlightRef.current = false;
     }
-  }, [address, walletClient, cleanupXmtp, refreshRequests]);
+  }, [address, walletClient, attachXmtpClient]);
 
+  // Silent resume when wallet connects (one-time MetaMask was already done).
   useEffect(() => {
     if (address && walletClient) {
-      initXmtp();
+      resumeXmtp();
     } else {
       cleanupXmtp();
     }
-    return () => {
-      cleanupXmtp();
-    };
   }, [address, walletClient?.account?.address]);
 
   const sendPaymentRequest = useCallback(
@@ -849,18 +907,27 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <div className="net-chip">
               <span className="net-dot"></span>Mezo Testnet · 31611
             </div>
-            <div
+            <button
+              type="button"
               className="net-chip"
-              style={{ cursor: xmtpStatus === "error" ? "pointer" : "default" }}
-              onClick={() => xmtpStatus === "error" && initXmtp()}
+              disabled={xmtpStatus === "connecting" || xmtpStatus === "connected"}
+              onClick={() => initXmtp()}
+              style={{
+                cursor:
+                  xmtpStatus === "connected" || xmtpStatus === "connecting"
+                    ? "default"
+                    : "pointer",
+                border: "none",
+                width: "100%",
+                textAlign: "left",
+                opacity: xmtpStatus === "connecting" ? 0.7 : 1,
+              }}
               title={
                 xmtpStatus === "connected"
                   ? "XMTP notifications active"
                   : xmtpStatus === "connecting"
-                    ? "Enabling secure inbox…"
-                    : xmtpStatus === "error"
-                      ? "Click to retry XMTP"
-                      : "XMTP disconnected"
+                    ? "Confirm the signature in MetaMask"
+                    : "Enable encrypted payment request notifications (MetaMask signature)"
               }
             >
               <span
@@ -879,11 +946,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               {xmtpStatus === "connected"
                 ? "XMTP · Live"
                 : xmtpStatus === "connecting"
-                  ? "XMTP · Connecting"
+                  ? "XMTP · Confirm in wallet"
                   : xmtpStatus === "error"
-                    ? "XMTP · Retry"
-                    : "XMTP · Off"}
-            </div>
+                    ? "Enable XMTP · Retry"
+                    : "Enable XMTP Notifications"}
+            </button>
             <button
               onClick={() => {
                 disconnect();

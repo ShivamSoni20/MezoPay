@@ -25,7 +25,7 @@ export interface AppContextType {
   xmtpClient: Client<unknown> | null;
   xmtpStatus: XmtpStatus;
   requestsVersion: number;
-  initXmtp: () => Promise<void>;
+  initXmtp: () => Promise<boolean>;
   sendPaymentRequest: (
     toAddress: string,
     toUsername: string,

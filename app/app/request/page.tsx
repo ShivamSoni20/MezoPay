@@ -22,6 +22,7 @@ export default function RequestPage() {
     refetchData,
     xmtpStatus,
     requestsVersion,
+    initXmtp,
     sendPaymentRequest,
     notifyPaymentCompleted,
     refreshRequests,
@@ -163,13 +164,13 @@ export default function RequestPage() {
       showToast("Please enter an amount to request");
       return;
     }
-    if (xmtpStatus !== "connected") {
-      showToast("XMTP is still connecting — wait a moment or retry from the sidebar");
-      return;
-    }
-
     setIsSending(true);
     try {
+      if (xmtpStatus !== "connected") {
+        const ok = await initXmtp();
+        if (!ok) return;
+      }
+
       const resolved = await resolveRecipient();
       if (!resolved) return;
 
