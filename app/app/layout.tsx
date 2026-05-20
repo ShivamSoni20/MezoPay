@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { useAccount, useDisconnect, useReadContract } from "wagmi";
+import { useAccount, useDisconnect, useReadContract, usePublicClient } from "wagmi";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import { ConnectWallet } from "@/components/ConnectWallet";
@@ -13,6 +13,7 @@ import { AppContext } from "./context";
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { address, isConnected } = useAccount();
   const { disconnect } = useDisconnect();
+  const publicClient = usePublicClient();
   const pathname = usePathname();
   const router = useRouter();
 
@@ -125,7 +126,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     const fetchGoldskyData = async () => {
       try {
         const query = `
-          query GetUserData($user: String!) {
+          query GetUserData($user: String!, $userBytes: Bytes!) {
             users(where: { id: $user }) {
               id
               username
@@ -151,10 +152,39 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 creator
               }
             }
+            sentTransfers: transfers(
+              first: 100,
+              orderBy: timestamp,
+              orderDirection: desc,
+              where: { from: $userBytes }
+            ) {
+              id
+              from
+              to
+              amount
+              txHash
+              timestamp
+              blockNumber
+            }
+            receivedTransfers: transfers(
+              first: 100,
+              orderBy: timestamp,
+              orderDirection: desc,
+              where: { to: $userBytes }
+            ) {
+              id
+              from
+              to
+              amount
+              txHash
+              timestamp
+              blockNumber
+            }
           }
         `;
 
-        const response = await fetch("https://api.goldsky.com/api/public/project_cmpauvflbxl4l01tgc2cgakep/subgraphs/mezosplit/v1/gn", {
+        const goldskyUrl = process.env.NEXT_PUBLIC_GOLDSKY_URL || "https://api.goldsky.com/api/public/project_cmpauvflbxl4l01tgc2cgakep/subgraphs/mezosplit/v2/gn";
+        const response = await fetch(goldskyUrl, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -163,13 +193,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             query,
             variables: {
               user: address.toLowerCase(),
+              userBytes: address.toLowerCase(),
             },
           }),
         });
 
         const result = await response.json();
         if (result.data) {
-          const { tabs: fetchedTabs, tabPayments } = result.data;
+          const { tabs: fetchedTabs, tabPayments, sentTransfers, receivedTransfers } = result.data;
           
           if (fetchedTabs && fetchedTabs.length > 0) {
             // Filter tabs where user is either creator OR a member
@@ -246,6 +277,199 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               });
             });
           }
+
+          // Process MUSD sent transfers (user is sender)
+          if (sentTransfers) {
+            for (const tx of sentTransfers) {
+              const toAddr = tx.to as string;
+              // Resolve username for the receiver
+              let toLabel = `${toAddr.slice(0, 6)}...${toAddr.slice(-4)}`;
+              if (publicClient) {
+                try {
+                  const rUsername = await publicClient.readContract({
+                    address: CONTRACTS.USERNAME_REGISTRY,
+                    abi: parseAbi(REGISTRY_ABI),
+                    functionName: "reverseLookup",
+                    args: [toAddr as `0x${string}`],
+                  }) as string;
+                  if (rUsername) toLabel = `@${rUsername}`;
+                } catch {}
+              }
+              dynamicHistory.push({
+                id: `goldsky-sent-${tx.id}`,
+                type: "sent",
+                title: `Sent to ${toLabel}`,
+                detail: "MUSD Transfer",
+                amount: -(Number(tx.amount) / 1e18),
+                date: new Date(Number(tx.timestamp) * 1000).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+                hash: tx.txHash,
+              });
+            }
+          }
+
+          // Process MUSD received transfers (user is receiver)
+          if (receivedTransfers) {
+            for (const tx of receivedTransfers) {
+              const fromAddr = tx.from as string;
+              // Resolve username for the sender
+              let fromLabel = `${fromAddr.slice(0, 6)}...${fromAddr.slice(-4)}`;
+              if (publicClient) {
+                try {
+                  const sUsername = await publicClient.readContract({
+                    address: CONTRACTS.USERNAME_REGISTRY,
+                    abi: parseAbi(REGISTRY_ABI),
+                    functionName: "reverseLookup",
+                    args: [fromAddr as `0x${string}`],
+                  }) as string;
+                  if (sUsername) fromLabel = `@${sUsername}`;
+                } catch {}
+              }
+              dynamicHistory.push({
+                id: `goldsky-recv-${tx.id}`,
+                type: "received",
+                title: `Received from ${fromLabel}`,
+                detail: "MUSD Transfer",
+                amount: Number(tx.amount) / 1e18,
+                date: new Date(Number(tx.timestamp) * 1000).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+                hash: tx.txHash,
+              });
+            }
+          }
+
+          // Build dynamic friends list
+          const friendMap = new Map<string, { address: string; name: string; handle: string; balance: number; status: "owes" | "owed" | "settled"; note: string }>();
+
+          // 1. Process transfers to populate contacts
+          if (sentTransfers) {
+            for (const tx of sentTransfers) {
+              const target = tx.to.toLowerCase();
+              if (target === address.toLowerCase()) continue;
+              if (!friendMap.has(target)) {
+                friendMap.set(target, {
+                  address: target,
+                  name: `${target.slice(0, 6)}...${target.slice(-4)}`,
+                  handle: target,
+                  balance: 0,
+                  status: "settled",
+                  note: "Active contact",
+                });
+              }
+            }
+          }
+
+          if (receivedTransfers) {
+            for (const tx of receivedTransfers) {
+              const target = tx.from.toLowerCase();
+              if (target === address.toLowerCase()) continue;
+              if (!friendMap.has(target)) {
+                friendMap.set(target, {
+                  address: target,
+                  name: `${target.slice(0, 6)}...${target.slice(-4)}`,
+                  handle: target,
+                  balance: 0,
+                  status: "settled",
+                  note: "Active contact",
+                });
+              }
+            }
+          }
+
+          // 2. Process tabs to populate contacts and calculate debt
+          if (fetchedTabs) {
+            for (const t of fetchedTabs) {
+              const creator = t.creator.toLowerCase();
+              const isCreator = creator === address.toLowerCase();
+
+              // Add creator as contact if it's someone else
+              if (!isCreator) {
+                if (!friendMap.has(creator)) {
+                  friendMap.set(creator, {
+                    address: creator,
+                    name: `${creator.slice(0, 6)}...${creator.slice(-4)}`,
+                    handle: creator,
+                    balance: 0,
+                    status: "settled",
+                    note: "Group tab creator",
+                  });
+                }
+              }
+
+              // Add members as contacts
+              for (let idx = 0; idx < t.members.length; idx++) {
+                const member = t.members[idx].toLowerCase();
+                if (member === address.toLowerCase()) continue;
+                if (!friendMap.has(member)) {
+                  friendMap.set(member, {
+                    address: member,
+                    name: member.startsWith("0x") ? `${member.slice(0, 6)}...${member.slice(-4)}` : member,
+                    handle: member,
+                    balance: 0,
+                    status: "settled",
+                    note: "Tab member",
+                  });
+                }
+              }
+
+              // Calculate debt if tab is unsettled
+              if (!t.settled) {
+                const totalAmount = Number(t.shares.reduce((a: string, b: string) => BigInt(a) + BigInt(b), BigInt(0))) / 1e18;
+                
+                if (isCreator) {
+                  const shareCount = t.members.length || 1;
+                  const perMemberShare = totalAmount / shareCount;
+
+                  for (let idx = 0; idx < t.members.length; idx++) {
+                    const member = t.members[idx].toLowerCase();
+                    if (member === address.toLowerCase()) continue;
+
+                    const contact = friendMap.get(member);
+                    if (contact) {
+                      contact.balance += perMemberShare;
+                      contact.status = "owes";
+                      contact.note = `owes share for "${t.title}"`;
+                    }
+                  }
+                } else {
+                  const hasPaidThisTab = tabPayments && tabPayments.some((p: any) => p.tab.id === t.id);
+                  if (!hasPaidThisTab) {
+                    const shareCount = t.members.length || 1;
+                    const userIndex = t.members.findIndex((m: string) => m.toLowerCase() === address.toLowerCase() || (username && m.toLowerCase() === username.toLowerCase()));
+                    const userShare = userIndex !== -1 && t.shares[userIndex] 
+                      ? Number(t.shares[userIndex]) / 1e18 
+                      : totalAmount / shareCount;
+
+                    const creatorContact = friendMap.get(creator);
+                    if (creatorContact) {
+                      creatorContact.balance -= userShare;
+                      creatorContact.status = "owed";
+                      creatorContact.note = `you owe for "${t.title}"`;
+                    }
+                  }
+                }
+              }
+            }
+          }
+
+          // 3. Resolve usernames asynchronously
+          const resolvedFriends = Array.from(friendMap.values());
+          Promise.all(resolvedFriends.map(async (friend) => {
+            if (friend.address.startsWith("0x") && publicClient) {
+              try {
+                const u = await publicClient.readContract({
+                  address: CONTRACTS.USERNAME_REGISTRY,
+                  abi: parseAbi(REGISTRY_ABI),
+                  functionName: "reverseLookup",
+                  args: [friend.address as `0x${string}`],
+                }) as string;
+                if (u) {
+                  friend.name = `@${u}`;
+                  friend.handle = u;
+                }
+              } catch {}
+            }
+          })).then(() => {
+            setFriends(resolvedFriends);
+          });
 
           if (dynamicHistory.length > 0) {
             setHistory((prev) => {

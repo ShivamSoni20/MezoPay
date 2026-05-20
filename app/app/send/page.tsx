@@ -86,7 +86,7 @@ export default function SendPage() {
           detail: note || "Direct Payment",
           amount: -parseFloat(amount),
           date: "Just now",
-          hash: `${hash.slice(0, 6)}...${hash.slice(-4)}`,
+          hash: hash,
         },
         ...prev,
       ]);

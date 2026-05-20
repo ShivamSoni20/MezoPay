@@ -64,7 +64,7 @@ export default function HistoryPage() {
             }
 
             const explorerUrl = tx.hash.startsWith("0x")
-              ? `https://explorer.testnet.mezo.org/tx/${tx.hash}`
+              ? `https://explorer.test.mezo.org/tx/${tx.hash}`
               : `#`;
 
             return (
@@ -86,7 +86,9 @@ export default function HistoryPage() {
                       rel="noopener noreferrer"
                       className="hist-hash block"
                     >
-                      {tx.hash}
+                      {tx.hash.startsWith("0x") && tx.hash.length === 66
+                        ? `${tx.hash.slice(0, 6)}...${tx.hash.slice(-4)}`
+                        : tx.hash}
                     </a>
                   )}
                 </div>
