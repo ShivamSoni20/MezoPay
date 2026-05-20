@@ -5,6 +5,8 @@ const nextConfig = {
     "@mezo-org/orangekit",
     "@mezo-org/orangekit-contracts",
     "@mezo-org/orangekit-smart-account",
+    "@xmtp/browser-sdk",
+    "@xmtp/wasm-bindings",
   ],
   webpack: (config, { isServer }) => {
     if (!isServer) {

@@ -5,9 +5,18 @@ import { useApp } from "../context";
 import { usePublicClient, useWriteContract } from "wagmi";
 import { parseUnits, parseAbi } from "viem";
 import { CONTRACTS, MUSD_ABI, REGISTRY_ABI } from "@/lib/contracts";
+import { getRequestById, updateRequestStatus } from "@/lib/requests";
 
 export default function SendPage() {
-  const { balanceFormatted, friends, setHistory, showToast, refetchData } = useApp();
+  const {
+    balanceFormatted,
+    friends,
+    setHistory,
+    showToast,
+    refetchData,
+    notifyPaymentCompleted,
+    refreshRequests,
+  } = useApp();
   const publicClient = usePublicClient();
   const { writeContractAsync } = useWriteContract();
 
@@ -15,6 +24,7 @@ export default function SendPage() {
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [linkedRequestId, setLinkedRequestId] = useState<string | null>(null);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -22,9 +32,11 @@ export default function SendPage() {
       const to = params.get("to");
       const amt = params.get("amount");
       const nt = params.get("note");
+      const reqId = params.get("requestId");
       if (to) setToHandle(to.startsWith("0x") ? to : `@${to}`);
       if (amt) setAmount(amt);
       if (nt) setNote(nt);
+      if (reqId) setLinkedRequestId(reqId);
     }
   }, []);
 
@@ -91,7 +103,16 @@ export default function SendPage() {
         ...prev,
       ]);
 
-      // Clean inputs
+      if (linkedRequestId) {
+        updateRequestStatus(linkedRequestId, "accepted");
+        const linked = getRequestById(linkedRequestId);
+        if (linked?.fromAddress) {
+          await notifyPaymentCompleted(linkedRequestId, linked.fromAddress);
+        }
+        setLinkedRequestId(null);
+        refreshRequests();
+      }
+
       setToHandle("");
       setAmount("");
       setNote("");

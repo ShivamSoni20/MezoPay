@@ -1,6 +1,9 @@
 "use client";
 
 import { createContext, useContext } from "react";
+import type { Client } from "@xmtp/browser-sdk";
+
+export type XmtpStatus = "disconnected" | "connecting" | "connected" | "error";
 
 // Types for AppContext
 export interface AppContextType {
@@ -19,6 +22,19 @@ export interface AppContextType {
   yieldEarned: number;
   owedAmount: number;
   oweAmount: number;
+  xmtpClient: Client<unknown> | null;
+  xmtpStatus: XmtpStatus;
+  requestsVersion: number;
+  initXmtp: () => Promise<void>;
+  sendPaymentRequest: (
+    toAddress: string,
+    toUsername: string,
+    amount: number,
+    note: string,
+    requestId?: string,
+  ) => Promise<boolean>;
+  notifyPaymentCompleted: (requestId: string, toAddress: string) => Promise<void>;
+  refreshRequests: () => void;
 }
 
 export const AppContext = createContext<AppContextType | undefined>(undefined);

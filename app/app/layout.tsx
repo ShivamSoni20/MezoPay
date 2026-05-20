@@ -1,14 +1,26 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect } from "react";
-import { useAccount, useDisconnect, useReadContract, usePublicClient } from "wagmi";
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import { useAccount, useDisconnect, useReadContract, usePublicClient, useWalletClient } from "wagmi";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
-import { ConnectWallet } from "@/components/ConnectWallet";
+import {
+  Client,
+  ConsentState,
+  type AsyncStreamProxy,
+  type ClientOptions,
+  type DecodedMessage,
+} from "@xmtp/browser-sdk";
 import { CONTRACTS, MUSD_ABI, REGISTRY_ABI } from "@/lib/contracts";
 import { parseAbi } from "viem";
+import {
+  buildSignerFromWalletClient,
+  getXmtpEnv,
+  handleIncomingMessage,
+  sendDmJson,
+} from "@/lib/xmtp";
 
-import { AppContext } from "./context";
+import { AppContext, type XmtpStatus } from "./context";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { address, isConnected } = useAccount();
@@ -26,6 +38,20 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [tabs, setTabs] = useState<any[]>([]);
   const [history, setHistory] = useState<any[]>([]);
   const [friends, setFriends] = useState<any[]>([]);
+
+  // XMTP state (OPFS: one tab per browser profile)
+  const [xmtpClient, setXmtpClient] = useState<Client<unknown> | null>(null);
+  const [xmtpStatus, setXmtpStatus] = useState<XmtpStatus>("disconnected");
+  const [requestsVersion, setRequestsVersion] = useState(0);
+  const xmtpClientRef = useRef<Client<unknown> | null>(null);
+  const messageStreamRef = useRef<AsyncStreamProxy<DecodedMessage> | null>(null);
+  const initInFlightRef = useRef(false);
+
+  const { data: walletClient } = useWalletClient();
+
+  const refreshRequests = useCallback(() => {
+    setRequestsVersion((v) => v + 1);
+  }, []);
 
   // Read Username
   const { data: rawUsername, refetch: refetchUsername } = useReadContract({
@@ -118,6 +144,146 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       router.push("/");
     }
   }, [isConnected, address, router]);
+
+  const cleanupXmtp = useCallback(async () => {
+    if (messageStreamRef.current) {
+      try {
+        await messageStreamRef.current.return();
+      } catch {
+        // stream may already be closed
+      }
+      messageStreamRef.current = null;
+    }
+    if (xmtpClientRef.current) {
+      try {
+        xmtpClientRef.current.close();
+      } catch {
+        // ignore
+      }
+      xmtpClientRef.current = null;
+    }
+    setXmtpClient(null);
+    setXmtpStatus("disconnected");
+    initInFlightRef.current = false;
+  }, []);
+
+  const initXmtp = useCallback(async () => {
+    if (!address || !walletClient) return;
+    if (initInFlightRef.current) return;
+    if (xmtpClientRef.current) return;
+
+    initInFlightRef.current = true;
+    setXmtpStatus("connecting");
+
+    try {
+      await cleanupXmtp();
+
+      const signer = buildSignerFromWalletClient(walletClient);
+      const client = await Client.create(signer, {
+        env: getXmtpEnv(),
+      } as ClientOptions);
+      await client.conversations.syncAll([ConsentState.Allowed]);
+
+      xmtpClientRef.current = client;
+      setXmtpClient(client);
+      setXmtpStatus("connected");
+
+      const stream = await client.conversations.streamAllMessages({
+        consentStates: [ConsentState.Allowed],
+        onValue: (message) => {
+          if (!address) return;
+          handleIncomingMessage(message, {
+            connectedAddress: address,
+            onRequestReceived: (amount, fromLabel) => {
+              showToast(`Payment request from ${fromLabel}`, `$${amount.toFixed(2)}`);
+              refetchData();
+            },
+            onPaymentCompleted: () => {
+              showToast("Payment request settled!");
+              refetchData();
+            },
+            onRequestsUpdated: refreshRequests,
+          });
+        },
+        onError: (error) => {
+          console.error("XMTP message stream error:", error);
+        },
+      });
+      messageStreamRef.current = stream;
+    } catch (err) {
+      console.error("XMTP init failed:", err);
+      setXmtpStatus("error");
+      xmtpClientRef.current = null;
+      setXmtpClient(null);
+    } finally {
+      initInFlightRef.current = false;
+    }
+  }, [address, walletClient, cleanupXmtp, refreshRequests]);
+
+  useEffect(() => {
+    if (address && walletClient) {
+      initXmtp();
+    } else {
+      cleanupXmtp();
+    }
+    return () => {
+      cleanupXmtp();
+    };
+  }, [address, walletClient?.account?.address]);
+
+  const sendPaymentRequest = useCallback(
+    async (
+      toAddress: string,
+      toUsername: string,
+      amount: number,
+      note: string,
+      requestId?: string,
+    ): Promise<boolean> => {
+      const client = xmtpClientRef.current;
+      if (!client || !address) return false;
+
+      const id = requestId ?? `req-${Date.now()}`;
+      const payload = {
+        type: "mezopay_request" as const,
+        id,
+        fromAddress: address.toLowerCase(),
+        fromUsername: username || "",
+        toAddress: toAddress.toLowerCase(),
+        toUsername,
+        amount,
+        note,
+        timestamp: Math.floor(Date.now() / 1000),
+      };
+
+      try {
+        await sendDmJson(client, toAddress, payload);
+        return true;
+      } catch (err) {
+        console.error("Failed to send payment request via XMTP:", err);
+        return false;
+      }
+    },
+    [address, username],
+  );
+
+  const notifyPaymentCompleted = useCallback(
+    async (requestId: string, toAddress: string) => {
+      const client = xmtpClientRef.current;
+      if (!client || !address) return;
+
+      try {
+        await sendDmJson(client, toAddress, {
+          type: "mezopay_payment_completed",
+          requestId,
+          fromAddress: address.toLowerCase(),
+          timestamp: Math.floor(Date.now() / 1000),
+        });
+      } catch (err) {
+        console.error("Failed to notify payment completion via XMTP:", err);
+      }
+    },
+    [address],
+  );
 
   // Load real-time indexed records from Goldsky
   useEffect(() => {
@@ -260,6 +426,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 amount: isCreator ? (Number(t.shares.reduce((a: string, b: string) => BigInt(a) + BigInt(b), BigInt(0))) / 1e18) : -(Number(t.shares[0] || 0) / 1e18),
                 date: new Date(Number(t.createdAt) * 1000).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
                 hash: t.id,
+                timestamp: Number(t.createdAt),
               });
             });
           }
@@ -274,6 +441,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 amount: -(Number(p.amount) / 1e18),
                 date: new Date(Number(p.timestamp) * 1000).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
                 hash: p.id.split("-")[0],
+                timestamp: Number(p.timestamp),
               });
             });
           }
@@ -303,6 +471,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 amount: -(Number(tx.amount) / 1e18),
                 date: new Date(Number(tx.timestamp) * 1000).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
                 hash: tx.txHash,
+                timestamp: Number(tx.timestamp),
               });
             }
           }
@@ -332,6 +501,52 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 amount: Number(tx.amount) / 1e18,
                 date: new Date(Number(tx.timestamp) * 1000).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
                 hash: tx.txHash,
+                timestamp: Number(tx.timestamp),
+              });
+            }
+          }
+
+          // Load off-chain requests from LocalStorage
+          let localRequests: any[] = [];
+          if (typeof window !== "undefined") {
+            try {
+              const reqsStr = localStorage.getItem("mezopay_requests");
+              if (reqsStr) {
+                localRequests = JSON.parse(reqsStr);
+              }
+            } catch (err) {}
+          }
+
+          // Format pending requests for history
+          for (const req of localRequests) {
+            if (req.status !== "pending") continue;
+
+            const isRequester = req.fromAddress?.toLowerCase() === address.toLowerCase();
+            const isRequestee = req.toAddress?.toLowerCase() === address.toLowerCase();
+
+            if (isRequester) {
+              const toLabel = req.toUsername ? `@${req.toUsername}` : `${req.toAddress.slice(0, 6)}...${req.toAddress.slice(-4)}`;
+              dynamicHistory.push({
+                id: `local-req-${req.id}`,
+                type: "received", // Positive/incoming for the requester
+                title: `Requested from ${toLabel}`,
+                detail: req.note || "Quick Request",
+                amount: req.amount,
+                date: "Pending",
+                hash: req.id,
+                timestamp: req.timestamp,
+              });
+            } else if (isRequestee) {
+              const fromLabel = req.fromUsername ? `@${req.fromUsername}` : `${req.fromAddress.slice(0, 6)}...${req.fromAddress.slice(-4)}`;
+              dynamicHistory.push({
+                id: `local-req-${req.id}`,
+                type: "sent", // Negative/outgoing for the requestee
+                title: `Request from ${fromLabel}`,
+                detail: req.note || "Quick Request",
+                amount: -req.amount,
+                date: "Pending",
+                hash: req.id,
+                timestamp: req.timestamp,
               });
             }
           }
@@ -398,6 +613,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               for (let idx = 0; idx < t.members.length; idx++) {
                 const member = t.members[idx].toLowerCase();
                 if (member === address.toLowerCase()) continue;
+
                 if (!friendMap.has(member)) {
                   friendMap.set(member, {
                     address: member,
@@ -474,7 +690,21 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           if (dynamicHistory.length > 0) {
             setHistory((prev) => {
               const ids = new Set(dynamicHistory.map((h) => h.id));
-              return [...dynamicHistory, ...prev.filter((h) => !ids.has(h.id))];
+              const merged = [...dynamicHistory, ...prev.filter((h) => !ids.has(h.id))];
+
+              // Sort entire merged history: Pending first, then by timestamp desc
+              merged.sort((a, b) => {
+                const aPending = a.date === "Pending";
+                const bPending = b.date === "Pending";
+                if (aPending && !bPending) return -1;
+                if (!aPending && bPending) return 1;
+
+                const aTime = a.timestamp || (a.id.startsWith("tx-") ? Number(a.id.split("-")[1]) / 1000 : 0);
+                const bTime = b.timestamp || (b.id.startsWith("tx-") ? Number(b.id.split("-")[1]) / 1000 : 0);
+                return bTime - aTime;
+              });
+
+              return merged;
             });
           }
         }
@@ -526,6 +756,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         yieldEarned,
         owedAmount,
         oweAmount,
+        xmtpClient,
+        xmtpStatus,
+        requestsVersion,
+        initXmtp,
+        sendPaymentRequest,
+        notifyPaymentCompleted,
+        refreshRequests,
       }}
     >
       <div className="flex min-h-screen">
@@ -611,6 +848,41 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           <div className="s-footer" style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
             <div className="net-chip">
               <span className="net-dot"></span>Mezo Testnet · 31611
+            </div>
+            <div
+              className="net-chip"
+              style={{ cursor: xmtpStatus === "error" ? "pointer" : "default" }}
+              onClick={() => xmtpStatus === "error" && initXmtp()}
+              title={
+                xmtpStatus === "connected"
+                  ? "XMTP notifications active"
+                  : xmtpStatus === "connecting"
+                    ? "Enabling secure inbox…"
+                    : xmtpStatus === "error"
+                      ? "Click to retry XMTP"
+                      : "XMTP disconnected"
+              }
+            >
+              <span
+                className="net-dot"
+                style={{
+                  background:
+                    xmtpStatus === "connected"
+                      ? "var(--green)"
+                      : xmtpStatus === "connecting"
+                        ? "var(--orange)"
+                        : xmtpStatus === "error"
+                          ? "var(--red)"
+                          : "var(--gray)",
+                }}
+              ></span>
+              {xmtpStatus === "connected"
+                ? "XMTP · Live"
+                : xmtpStatus === "connecting"
+                  ? "XMTP · Connecting"
+                  : xmtpStatus === "error"
+                    ? "XMTP · Retry"
+                    : "XMTP · Off"}
             </div>
             <button
               onClick={() => {

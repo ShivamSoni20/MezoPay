@@ -6,9 +6,12 @@ import { useRouter } from "next/navigation";
 import { usePublicClient, useWriteContract } from "wagmi";
 import { parseUnits, parseAbi } from "viem";
 import { CONTRACTS, MUSD_ABI, REGISTRY_ABI } from "@/lib/contracts";
+import { upsertRequest, type MezoPayRequest } from "@/lib/requests";
+import { canRecipientMessage } from "@/lib/xmtp";
 
 export default function DashboardPage() {
   const {
+    address,
     balanceFormatted,
     username,
     friends,
@@ -20,6 +23,9 @@ export default function DashboardPage() {
     yieldEarned,
     owedAmount,
     oweAmount,
+    xmtpStatus,
+    sendPaymentRequest,
+    refreshRequests,
   } = useApp();
 
   const router = useRouter();
@@ -57,37 +63,37 @@ export default function DashboardPage() {
     setIsLoading(true);
 
     try {
-      if (activeTab === "send") {
-        // Check if it's a direct address or a handle
-        let resolvedAddress: `0x${string}` = "0x0000000000000000000000000000000000000000";
-        const isDirectAddress = toHandle.startsWith("0x") && toHandle.length === 42;
+      // Resolve address (needed for send and request)
+      let resolvedAddress: `0x${string}` = "0x0000000000000000000000000000000000000000";
+      const isDirectAddress = toHandle.startsWith("0x") && toHandle.length === 42;
 
-        if (isDirectAddress) {
-          resolvedAddress = toHandle as `0x${string}`;
-        } else {
-          showToast(`Resolving @${cleanHandle}...`);
-          if (publicClient) {
-            try {
-              const result = await publicClient.readContract({
-                address: CONTRACTS.USERNAME_REGISTRY,
-                abi: parseAbi(REGISTRY_ABI),
-                functionName: "resolve",
-                args: [cleanHandle],
-              });
-              resolvedAddress = result as `0x${string}`;
-            } catch (err) {
-              console.error("Registry lookup failed", err);
-            }
+      if (isDirectAddress) {
+        resolvedAddress = toHandle as `0x${string}`;
+      } else {
+        showToast(`Resolving @${cleanHandle}...`);
+        if (publicClient) {
+          try {
+            const result = await publicClient.readContract({
+              address: CONTRACTS.USERNAME_REGISTRY,
+              abi: parseAbi(REGISTRY_ABI),
+              functionName: "resolve",
+              args: [cleanHandle],
+            });
+            resolvedAddress = result as `0x${string}`;
+          } catch (err) {
+            console.error("Registry lookup failed", err);
           }
         }
+      }
 
-        if (resolvedAddress === "0x0000000000000000000000000000000000000000") {
-          showToast(`Error: @${cleanHandle} is not registered on the Mezo Username Registry.`);
-          setIsLoading(false);
-          return;
-        }
+      if (resolvedAddress === "0x0000000000000000000000000000000000000000") {
+        showToast(`Error: @${cleanHandle} is not registered on the Mezo Username Registry.`);
+        setIsLoading(false);
+        return;
+      }
 
-        // 2. Direct transfer on-chain
+      if (activeTab === "send") {
+        // Direct transfer on-chain
         const amountWei = parseUnits(amount, 18);
         showToast("Sending transaction...");
         const hash = await writeContractAsync({
@@ -117,44 +123,62 @@ export default function DashboardPage() {
         setNote("");
         refetchData();
       } else if (activeTab === "request") {
-          // Request flow
-          await new Promise((resolve) => setTimeout(resolve, 1000));
-          showToast(`Request for $${amount} sent to @${cleanHandle}!`, `$${amount}`);
-          setHistory((prev) => [
-            {
-              id: `tx-${Date.now()}`,
-              type: "sent",
-              title: `Requested from @${cleanHandle}`,
-              detail: note || "Quick Request",
-              amount: parseFloat(amount),
-              date: "Pending",
-              hash: "0xrequest...tx",
-            },
-            ...prev,
-          ]);
-          setToHandle("");
-          setAmount("");
-          setNote("");
-        } else if (activeTab === "split") {
-          // Split flow
-          await new Promise((resolve) => setTimeout(resolve, 1200));
-          showToast(`Created split of $${amount} with @${cleanHandle}!`, `$${(parseFloat(amount) / 2).toFixed(2)}`);
-          setHistory((prev) => [
-            {
-              id: `tx-${Date.now()}`,
-              type: "split",
-              title: `Split with @${cleanHandle}`,
-              detail: note || "Quick Split",
-              amount: -parseFloat(amount) / 2,
-              date: "Just now",
-              hash: "0xsplit...tx",
-            },
-            ...prev,
-          ]);
-          setToHandle("");
-          setAmount("");
-          setNote("");
+        const reqId = `req-${Date.now()}`;
+        const newRequest: MezoPayRequest = {
+          id: reqId,
+          fromAddress: (address || "0x0000000000000000000000000000000000000000").toLowerCase(),
+          fromUsername: username || "",
+          toAddress: resolvedAddress.toLowerCase(),
+          toUsername: isDirectAddress ? "" : cleanHandle,
+          amount: parseFloat(amount),
+          note: note || "Quick Request",
+          timestamp: Math.floor(Date.now() / 1000),
+          status: "pending",
+        };
+
+        upsertRequest(newRequest);
+
+        let delivered = false;
+        if (xmtpStatus === "connected") {
+          try {
+            const reachable = await canRecipientMessage(resolvedAddress);
+            if (reachable) {
+              delivered = await sendPaymentRequest(
+                resolvedAddress,
+                isDirectAddress ? "" : cleanHandle,
+                newRequest.amount,
+                newRequest.note,
+                reqId,
+              );
+            } else {
+              showToast(
+                isDirectAddress
+                  ? "Recipient not on XMTP — request saved locally"
+                  : `@${cleanHandle} is not on XMTP — request saved locally`,
+              );
+            }
+          } catch (err) {
+            console.error("XMTP request delivery failed", err);
+          }
         }
+
+        if (delivered) {
+          showToast(
+            `Request for $${amount} sent via XMTP to ${isDirectAddress ? "wallet" : `@${cleanHandle}`}!`,
+            `$${amount}`,
+          );
+        } else if (xmtpStatus === "connecting") {
+          showToast("Request saved — XMTP still connecting");
+        } else {
+          showToast(`Request for $${amount} saved!`, `$${amount}`);
+        }
+
+        setToHandle("");
+        setAmount("");
+        setNote("");
+        refreshRequests();
+        refetchData();
+      }
     } catch (e: any) {
       console.error(e);
       showToast(e.message || "Transaction failed");
@@ -276,11 +300,15 @@ export default function DashboardPage() {
                 : "Create Split Tab →"}
             </button>
             <div className="gasless-note">
-              {activeTab === "send" 
-                ? "⚡ EIP-712 permit2 · Receiver pays zero gas" 
-                : activeTab === "request" 
-                ? "⚡ Requests are gasless to create" 
-                : "⚡ Split equally between you and your friend"}
+              {activeTab === "send"
+                ? "⚡ EIP-712 permit2 · Receiver pays zero gas"
+                : activeTab === "request"
+                  ? xmtpStatus === "connecting"
+                    ? "⚡ Enabling XMTP secure inbox…"
+                    : xmtpStatus === "connected"
+                      ? "⚡ Requests notify via encrypted XMTP"
+                      : "⚡ Requests saved locally · XMTP offline"
+                  : "⚡ Split equally between you and your friend"}
             </div>
           </div>
         </div>
