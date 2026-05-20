@@ -49,3 +49,23 @@ dataSources:
         - event: MemberPaid(indexed bytes32,indexed address,uint256)
           handler: handleMemberPaid
       file: UsernameRegistry\UsernameRegistry.wasm
+  - kind: ethereum
+    name: MUSD
+    network: mezo-testnet
+    source:
+      address: "0x118917a40FAF1CD7a13dB0Ef56C86De7973Ac503"
+      abi: MUSD
+      startBlock: 0
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - Transfer
+      abis:
+        - name: MUSD
+          file: MUSD\abis\MUSD.json
+      eventHandlers:
+        - event: Transfer(indexed address,indexed address,uint256)
+          handler: handleTransfer
+      file: UsernameRegistry\UsernameRegistry.wasm

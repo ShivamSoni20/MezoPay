@@ -1,7 +1,8 @@
 import { BigInt, Bytes } from "@graphprotocol/graph-ts"
 import { UsernameRegistered, UsernameReleased } from "../generated/UsernameRegistry/UsernameRegistry"
 import { TabCreated, TabSettled, MemberPaid } from "../generated/SplitManager/SplitManager"
-import { User, Tab, TabPayment } from "../generated/schema"
+import { Transfer as TransferEvent } from "../generated/MUSD/MUSD"
+import { User, Tab, TabPayment, Transfer } from "../generated/schema"
 
 export function handleUsernameRegistered(event: UsernameRegistered): void {
   let userId = event.params.wallet.toHexString()
@@ -61,4 +62,16 @@ export function handleMemberPaid(event: MemberPaid): void {
     payment.timestamp = event.block.timestamp
     payment.save()
   }
+}
+
+export function handleTransfer(event: TransferEvent): void {
+  let id = event.transaction.hash.toHexString() + "-" + event.logIndex.toString()
+  let transfer = new Transfer(id)
+  transfer.from = event.params.from
+  transfer.to = event.params.to
+  transfer.amount = event.params.value
+  transfer.txHash = event.transaction.hash
+  transfer.timestamp = event.block.timestamp
+  transfer.blockNumber = event.block.number
+  transfer.save()
 }

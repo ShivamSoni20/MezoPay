@@ -23,3 +23,13 @@ type TabPayment @entity {
   amount: BigInt!
   timestamp: BigInt!
 }
+
+type Transfer @entity {
+  id: ID!
+  from: Bytes!
+  to: Bytes!
+  amount: BigInt!
+  txHash: Bytes!
+  timestamp: BigInt!
+  blockNumber: BigInt!
+}
