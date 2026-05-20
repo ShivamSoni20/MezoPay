@@ -183,7 +183,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           }
         `;
 
-        const goldskyUrl = process.env.NEXT_PUBLIC_GOLDSKY_URL || "https://api.goldsky.com/api/public/project_cmpauvflbxl4l01tgc2cgakep/subgraphs/mezosplit/v2/gn";
+        const goldskyUrl = process.env.NEXT_PUBLIC_GOLDSKY_URL || "https://api.goldsky.com/api/public/project_cmpauvflbxl4l01tgc2cgakep/subgraphs/mezosplit/v3/gn";
         const response = await fetch(goldskyUrl, {
           method: "POST",
           headers: {
