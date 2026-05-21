@@ -941,15 +941,14 @@ export default function Home() {
         <section className="hero">
           <div>
             <div className="hero-badge">
-              <span className="pulse"></span>Built on Mezo · Bitcoin-backed MUSD
+              <span className="pulse"></span>Supernormal dApps · Self-service Bitcoin banking
             </div>
             <h1 className="landing-h1">
-              Send & Split MUSD<br /><span className="accent">like Venmo</span>
+              Your Bitcoin bank.<br /><span className="accent">No bank required.</span>
             </h1>
             <p className="hero-desc" style={{ maxWidth: "540px" }}>
-              Send, request, and split bills with friends using only @username.<br />
-              Gasless transfers, group tabs in one tap, and real yield on your balance.<br />
-              <strong>No addresses. No gas fees. No crypto confusion.</strong>
+              Send MUSD to @username. Split dinner with friends. Save toward group goals — all with Bitcoin-backed money, no addresses, no gas warnings, no bank account.<br />
+              <strong>MezoPay is self-service banking on Bitcoin rails: payments, splits, and savings in one app.</strong>
             </p>
             <div className="hero-ctas" style={{ marginBottom: "12px" }}>
               <ConnectButton.Custom>
@@ -976,24 +975,25 @@ export default function Home() {
               <span className="badge">🔒 Mezo Passport</span>
               <span className="badge">📊 Goldsky Feed</span>
               <span className="badge">📈 Mezo Earn</span>
+              <span className="badge">🏺 Savings Pots</span>
               <span className="net-pill">🌐 Chain 31611 Testnet</span>
             </div>
             <div className="hero-stats">
               <div>
-                <div className="stat-num">80M+</div>
-                <div className="stat-lbl">Venmo TAM users</div>
+                <div className="stat-num">5</div>
+                <div className="stat-lbl">Mezo primitives used</div>
               </div>
               <div>
                 <div className="stat-num">$0</div>
                 <div className="stat-lbl">Gas for receiver</div>
               </div>
               <div>
-                <div className="stat-num">1 tx</div>
-                <div className="stat-lbl">Group batch settle</div>
+                <div className="stat-num">@username</div>
+                <div className="stat-lbl">Not 0x addresses</div>
               </div>
               <div>
-                <div className="stat-num">4</div>
-                <div className="stat-lbl">Mezo primitives</div>
+                <div className="stat-num">1 tx</div>
+                <div className="stat-lbl">Group batch settle</div>
               </div>
             </div>
           </div>
@@ -1066,8 +1066,8 @@ export default function Home() {
               </div>
             </div>
             <div className="fc r">
-              <div className="fcl">Earning yield</div>
-              <div className="fcv">2.4% APR</div>
+              <div className="fcl">Savings Pots</div>
+              <div className="fcv">Live</div>
             </div>
           </div>
         </section>
@@ -1096,8 +1096,8 @@ export default function Home() {
             </div>
             <div className="step-card">
               <div className="step-num">04</div>
-              <h3>Earn Yield & Track</h3>
-              <p>Idle MUSD earns 2.4% APR automatically. Goldsky subgraph powers your real-time activity feed.</p>
+              <h3>Save & Track</h3>
+              <p>Lock MUSD in solo or group Savings Pots. Goldsky subgraph powers your real-time activity feed.</p>
             </div>
           </div>
         </section>
@@ -1140,18 +1140,18 @@ export default function Home() {
                 <span className="f-pill">✓ MVP · Testnet ready</span>
               </div>
               <div className="feature-card">
-                <div className="f-icon">📈</div>
-                <h3>Auto-Yield via Mezo Earn</h3>
+                <div className="f-icon">🏺</div>
+                <h3>Savings Pots — solo & group</h3>
                 <p>
-                  Opt-in deposits idle MUSD into live Mezo Earn vault. No new contract needed — calls existing vault interface. Shows live APR in dashboard. One button, real yield.
+                  Create time-locked MUSD savings goals on-chain via SavingsPot.sol. Solo pots for personal targets (house deposit, trip fund). Group pots invite friends via XMTP — everyone deposits their share, nobody can withdraw until the lock expires. Bitcoin-backed savings with social accountability.
                 </p>
-                <span className="f-pill">✓ MVP · Testnet ready</span>
+                <span className="f-pill">✓ Live on testnet · SavingsPot.sol deployed</span>
               </div>
               <div className="feature-card">
                 <div className="f-icon">💳</div>
                 <h3>Virtual Debit Card</h3>
                 <p>
-                  Full card UI in MVP — card number, MUSD balance, simulated tap-to-pay. Real issuance via Marqeta/Lithic + Mastercard is Phase 2. Demo shows the full vision to judges.
+                  Full card UI in MVP — card number, MUSD balance, simulated tap-to-pay. Real issuance via Marqeta/Lithic + Mastercard is Phase 2. Demo shows the full vision — Phase 2 with Marqeta/Lithic integration.
                 </p>
                 <span className="f-pill phase2">→ Phase 2 · Demo mode in MVP</span>
               </div>
@@ -1162,27 +1162,27 @@ export default function Home() {
         <div className="earn-strip">
           <div className="earn-strip-inner">
             <div>
-              <h3>💰 Your MUSD works while you sleep</h3>
+              <h3>🏺 Save together with Bitcoin-backed MUSD</h3>
               <p>
-                Idle balances auto-deposit into the Mezo Earn vault. Bitcoin-backed savings that actually earn — no extra steps, no new accounts, no leaving the app.
+                Create a group savings pot, invite friends via encrypted XMTP messages, and lock MUSD toward a shared goal. Solo pots for personal targets, group pots for shared ones — all settled on-chain, no middleman, no bank.
               </p>
             </div>
             <div className="earn-stat-row">
               <div>
-                <div className="es-v">2.4%</div>
-                <div className="es-l">Current APR</div>
-              </div>
-              <div>
                 <div className="es-v">Live</div>
-                <div className="es-l">Testnet vault</div>
+                <div className="es-l">On testnet now</div>
               </div>
               <div>
-                <div className="es-v">1-tap</div>
-                <div className="es-l">Opt-in toggle</div>
+                <div className="es-v">Solo + Group</div>
+                <div className="es-l">Pot types</div>
               </div>
               <div>
-                <div className="es-v">$0</div>
-                <div className="es-l">New contracts</div>
+                <div className="es-v">XMTP invite</div>
+                <div className="es-l">Group coordination</div>
+              </div>
+              <div>
+                <div className="es-v">Time lock</div>
+                <div className="es-l">On-chain enforced</div>
               </div>
             </div>
           </div>
@@ -1260,14 +1260,14 @@ export default function Home() {
             <div className="tech-card large">
               <div>
                 <div className="tc-header">
-                  <div className="tc-icon">📈</div>
-                  <div className="tc-title">Mezo Earn vault</div>
+                  <div className="tc-icon">🏺</div>
+                  <div className="tc-title">SavingsPot.sol</div>
                 </div>
                 <div className="tc-desc">
-                  Opt-in savings yield pool. Integrates directly with the live Mezo Earn vault interface on Mezo testnet. Enables instant 1-tap yield accumulation at 2.4% APR.
+                  On-chain time-locked savings goals. Solo pots for personal targets, group pots with XMTP invites for shared ones.
                 </div>
               </div>
-              <div className="tc-badge">DeFi Yield</div>
+              <div className="tc-badge">Smart Contract (~1.0d)</div>
             </div>
           </div>
           <div className="tech-note">

@@ -3,9 +3,9 @@
 import { useState, useEffect } from "react";
 import { useApp } from "../context";
 import { useRouter } from "next/navigation";
-import { usePublicClient, useWriteContract } from "wagmi";
+import { usePublicClient, useWriteContract, useReadContract } from "wagmi";
 import { parseUnits, parseAbi } from "viem";
-import { CONTRACTS, MUSD_ABI, REGISTRY_ABI } from "@/lib/contracts";
+import { CONTRACTS, MUSD_ABI, REGISTRY_ABI, SAVINGS_POT_ABI } from "@/lib/contracts";
 import { upsertRequest, type MezoPayRequest } from "@/lib/requests";
 import { canRecipientMessage } from "@/lib/xmtp";
 
@@ -39,6 +39,46 @@ export default function DashboardPage() {
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [totalPotsBalance, setTotalPotsBalance] = useState("0.00");
+
+  const { data: potCountRaw } = useReadContract({
+    address: CONTRACTS.SAVINGS_POT,
+    abi: SAVINGS_POT_ABI,
+    functionName: "potCount",
+  });
+  const potCount = potCountRaw ? Number(potCountRaw) : 0;
+
+  useEffect(() => {
+    async function fetchPotsBalance() {
+      const goldskyUrl = process.env.NEXT_PUBLIC_GOLDSKY_URL;
+      if (!goldskyUrl || !address) {
+        setTotalPotsBalance("0.00");
+        return;
+      }
+      try {
+        const query = `
+          {
+            savingsPots(where: { creator: "${address.toLowerCase()}" }) {
+              totalDeposited
+            }
+          }
+        `;
+        const res = await fetch(goldskyUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ query }),
+        });
+        const { data } = await res.json();
+        if (data && data.savingsPots) {
+          const sum = data.savingsPots.reduce((acc: number, p: any) => acc + Number(p.totalDeposited), 0);
+          setTotalPotsBalance((sum / 1e18).toFixed(2));
+        }
+      } catch (e) {
+        console.error("Failed to fetch pots balance", e);
+      }
+    }
+    fetchPotsBalance();
+  }, [address]);
 
   // Recalculate owed stats from context lists or fallback to match HTML values
   const owedByFriends = friends
@@ -199,7 +239,7 @@ export default function DashboardPage() {
         <div className="bal-card primary">
           <div className="bc-lbl">MUSD Balance</div>
           <div className="bc-val">${balanceFormatted}</div>
-          <div className="bc-sub">Bitcoin-backed · Earning 2.4% APR</div>
+          <div className="bc-sub">Bitcoin-backed · Savings Pots live</div>
         </div>
         <div className="bal-card">
           <div className="bc-lbl">You Are Owed</div>
@@ -218,12 +258,12 @@ export default function DashboardPage() {
           <div className="bc-chg dn">Due soon</div>
         </div>
         <div className="bal-card" style={{ cursor: "pointer" }} onClick={() => router.push("/app/earn")}>
-          <div className="bc-lbl">Total in Savings Pots</div>
+          <div className="bc-lbl">In Savings Pots</div>
           <div className="bc-val font-mono" style={{ color: "var(--orange)", fontSize: "1.35rem" }}>
-            🏺 View Pots
+            ${totalPotsBalance}
           </div>
-          <div className="bc-sub">Bitcoin-backed savings goals</div>
-          <div className="bc-chg up">Manage active pots →</div>
+          <div className="bc-sub">{potCount} active pot{potCount !== 1 ? "s" : ""} · Bitcoin-backed</div>
+          <div className="bc-chg up">Manage pots →</div>
         </div>
       </div>
 

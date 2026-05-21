@@ -2,7 +2,7 @@
 
 # MezoPay
 
-**Bitcoin-backed MUSD payments for everyday life — send, request, and split with @username only.**
+**Self-service Bitcoin banking — send, request, split, and save MUSD by @username. No addresses, no banks, no gas confusion.**
 
 [![Mezo](https://img.shields.io/badge/Mezo-Testnet-F97316?style=for-the-badge&logo=bitcoin&logoColor=white)](https://mezo.org)
 [![Track](https://img.shields.io/badge/Hackathon-Supernormal%20dApps%20(MUSD)-22C55E?style=for-the-badge)](https://supernormal.foundation)
@@ -23,7 +23,7 @@
 
 **MezoPay** is a consumer payments app built for the **Supernormal dApps — MUSD Track** at the Mezo hackathon. It turns Bitcoin-backed **MUSD** into something people actually use: pay a friend, request dinner money, or split a group tab — all with `@username`, not hex addresses.
 
-Mezo lets Bitcoin holders mint **MUSD** against BTC collateral at transparent, onchain terms. MezoPay sits on top of that stack as the **payments layer**: stable, fast, Bitcoin-backed money with human-readable handles and optional **2.4% APR** yield context on idle MUSD.
+Mezo lets Bitcoin holders mint MUSD against BTC collateral at transparent, onchain terms. MezoPay sits on top as the consumer banking layer: send to @username, split group bills, and save toward goals — all in MUSD, all on Bitcoin rails.
 
 > **Hackathon focus:** Self-service banking on Bitcoin rails — MUSD as the primary medium of exchange for real-world payment flows (P2P send, requests, splits, merchant-ready primitives).
 
@@ -37,7 +37,7 @@ Mezo lets Bitcoin holders mint **MUSD** against BTC collateral at transparent, o
 | User-controlled, onchain | Transfers & splits via smart contracts; positions auditable on explorer |
 | Productive capital | Dashboard surfaces live yield accrual (Mezo Earn narrative) |
 | No selling BTC | Spend/split/request in MUSD while keeping BTC exposure via Mezo’s model |
-| Consumer-first | `@username` registry, gasless-friendly permits, social wallet onboarding |
+| Superdapp vision | Payments + group splits + savings pots = full self-service Bitcoin banking |
 
 ---
 
@@ -50,8 +50,18 @@ Mezo lets Bitcoin holders mint **MUSD** against BTC collateral at transparent, o
 | **Group Split Tabs** | Onchain `SplitManager` — create tabs, track shares, settle with MUSD (+ EIP-2612 permit path) |
 | **@username Registry** | `UsernameRegistry.sol` maps handles → wallets (3–20 chars, lowercase) |
 | **Live Activity** | Goldsky subgraph indexes transfers, tabs, and registry events |
-| **Earn & Card (UI)** | Mezo Earn APR ticker + virtual card shell for hackathon demo narrative |
+| **Savings Pots** | SavingsPot.sol — solo or group time-locked MUSD savings goals. XMTP invites for group coordination. Deposit, lock, withdraw on unlock date. |
 | **Wallet UX** | [@mezo-org/passport](https://www.npmjs.com/package/@mezo-org/passport) + RainbowKit — email/social-friendly onboarding |
+
+---
+
+## Savings Pots
+
+On-chain time-locked savings goals via `SavingsPot.sol`:
+- **Solo pots** — personal goals (house deposit, trip fund) with configurable lock duration
+- **Group pots** — invite friends via XMTP, everyone deposits their share, time lock enforced on-chain
+- **No custody risk** — MUSD stays in the contract, not with any intermediary
+- Deployed at `0x72290EB00a06c4a5582c64e8E336F6e4D242bE87` on Mezo testnet
 
 ---
 
@@ -67,7 +77,7 @@ flowchart TB
 
     subgraph frontend["🟠 MezoPay Frontend — Next.js 14"]
         UI[Landing + App Shell]
-        DASH[Dashboard · Send · Request · Split]
+        DASH[Dashboard · Send · Request · Split · Save]
         XMTP_UI[XMTP Enable + Request Stream]
         WALLET[Mezo Passport + RainbowKit + Wagmi]
     end
@@ -82,6 +92,7 @@ flowchart TB
         MUSD[(MUSD ERC-20<br/>0x1189…c503)]
         REG[UsernameRegistry]
         SPLIT[SplitManager]
+        POT[SavingsPot]
     end
 
     U1 --> UI
@@ -92,26 +103,30 @@ flowchart TB
     WALLET --> MUSD
     WALLET --> REG
     WALLET --> SPLIT
+    WALLET --> POT
     XMTP_UI --> XMTP
     XMTP --> LS
     DASH --> GOLDSKY
     GOLDSKY --> MUSD
     GOLDSKY --> REG
     GOLDSKY --> SPLIT
+    GOLDSKY --> POT
     SPLIT --> MUSD
     SPLIT --> REG
-    XMTP -.->|mezopay_request / settled| U2
+    POT --> MUSD
+    XMTP -.->|mezopay_request / settled / invites| U2
 
     classDef mezo fill:#F0FDF4,stroke:#22C55E,stroke-width:2px,color:#1A1108
     classDef front fill:#FFF7ED,stroke:#F97316,stroke-width:2px,color:#1A1108
     classDef rt fill:#EFF6FF,stroke:#3B82F6,stroke-width:2px,color:#1A1108
-    class MUSD,REG,SPLIT mezo
+    class MUSD,REG,SPLIT,POT mezo
     class UI,DASH,XMTP_UI,WALLET front
     class XMTP,GOLDSKY,LS rt
 ```
 
-### Request notification flow
+### XMTP Notification Flows
 
+#### 1. Payment Requests
 ```mermaid
 %%{init: {'theme': 'base', 'themeVariables': {'actorBkg': '#FFF7ED', 'actorBorder': '#F97316', 'actorTextColor': '#1A1108', 'signalColor': '#F97316', 'noteBkgColor': '#F0FDF4', 'noteBorderColor': '#22C55E'}}}%%
 sequenceDiagram
@@ -130,6 +145,25 @@ sequenceDiagram
     App->>Chain: MUSD.transfer to Alice
     App->>XMTP: mezopay_payment_completed
     XMTP-->>Alice: Settlement notification
+```
+
+#### 2. Savings Pot Invites
+```mermaid
+%%{init: {'theme': 'base', 'themeVariables': {'actorBkg': '#FFF7ED', 'actorBorder': '#F97316', 'actorTextColor': '#1A1108', 'signalColor': '#F97316', 'noteBkgColor': '#F0FDF4', 'noteBorderColor': '#22C55E'}}}%%
+sequenceDiagram
+    autonumber
+    participant Alice as Creator
+    participant App as MezoPay
+    participant XMTP as XMTP Network
+    participant Bob as Invitee
+    participant Chain as SavingsPot.sol
+
+    Alice->>Chain: createPot(Group Trip)
+    Alice->>App: Invite @bob
+    App->>XMTP: Encrypted invite message
+    XMTP-->>Bob: Stream → "Join my Savings Pot!"
+    Bob->>App: Open Pot Details
+    Bob->>Chain: deposit(MUSD)
 ```
 
 ---
@@ -175,7 +209,7 @@ npm install
 cp .env.example .env.local
 ```
 
-Open `.env.local` and set at least `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID` and `NEXT_PUBLIC_GOLDSKY_URL` (after you deploy the subgraph). See [`.env.example`](.env.example) for all variables and comments.
+Open `.env.local` and set at least `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID`. The `NEXT_PUBLIC_GOLDSKY_URL` is already pre-configured to point to our live Goldsky deployment, so you don't need to deploy your own indexer. See [`.env.example`](.env.example) for all variables and comments.
 
 ### 2. Run the app
 

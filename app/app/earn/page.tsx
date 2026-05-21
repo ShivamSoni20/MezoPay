@@ -45,48 +45,79 @@ export default function SavingsPage() {
     functionName: "potCount",
   });
 
-  // Load pots (mock data for rich UI, augmented with real chain data)
+  // Load pots (real chain data augmented with fallback mock data)
   useEffect(() => {
     async function loadPots() {
-      if (!publicClient || potCount === undefined) return;
+      if (!publicClient) return;
       
-      const count = Number(potCount);
-      const loadedPots = [];
-      let totalSaved = 0;
-      
-      for (let i = 0; i < count; i++) {
-        // Compute potId (keccak256 logic is in contract, we can fetch events or just read mapping if we know potId)
-        // Since we don't have potId array easily, let's fetch PotCreated events
-      }
-      
-      // For the hackathon UI, we will merge real pots with some rich mock pots if real ones are empty, 
-      // or just show real ones. To ensure it looks good immediately:
-      const mockPots = [
-        {
-          id: 'mock-1', type: 'group', emoji: '✈️', name: 'Japan Trip 2025',
-          target: 1200, saved: 864, unlockDate: '2025-12-01',
-          daysLeft: 124,
-          members: [
-            { handle: 'alice', color: '#F97316', paid: true, share: 300 },
-            { handle: 'bob', color: '#8B5CF6', paid: true, share: 300 },
-            { handle: 'carol', color: '#06B6D4', paid: false, share: 300 },
-            { handle: 'dave', color: '#10B981', paid: false, share: 300 }
-          ],
-          isReal: false
-        },
-        {
-          id: 'mock-2', type: 'solo', emoji: '🏠', name: 'House Deposit',
-          target: 5000, saved: 1750, unlockDate: '2026-06-01',
-          daysLeft: 360,
-          members: [{ handle: 'you', color: '#F97316', paid: true, share: 5000 }],
-          isReal: false
+      try {
+        let realPots = [];
+        const goldskyUrl = process.env.NEXT_PUBLIC_GOLDSKY_URL;
+        
+        if (goldskyUrl) {
+          const query = `
+            {
+              savingsPots(orderBy: createdAt, orderDirection: desc) {
+                id
+                creator
+                name
+                targetAmount
+                totalDeposited
+                unlockTime
+                createdAt
+                deposits {
+                  user
+                  amount
+                }
+              }
+            }
+          `;
+          const res = await fetch(goldskyUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ query }),
+          });
+          const { data } = await res.json();
+          if (data && data.savingsPots && data.savingsPots.length > 0) {
+            realPots = data.savingsPots.map((p: any) => {
+              const target = Number(p.targetAmount) / 1e18;
+              const saved = Number(p.totalDeposited) / 1e18;
+              const unlockDateObj = new Date(Number(p.unlockTime) * 1000);
+              const unlockDate = unlockDateObj.toISOString().split('T')[0];
+              const daysLeft = Math.max(0, Math.ceil((unlockDateObj.getTime() - Date.now()) / 86400000));
+              const type = p.creator.toLowerCase() === address?.toLowerCase() ? 'solo' : 'group';
+              
+              return {
+                id: p.id,
+                type,
+                emoji: '🏺',
+                name: p.name,
+                target,
+                saved,
+                unlockDate,
+                daysLeft,
+                members: [{ handle: type === 'solo' ? 'you' : p.creator.slice(0, 6), color: '#F97316', paid: true, share: target }]
+              };
+            });
+          }
         }
-      ];
-      
-      setPots(mockPots);
+        
+        if (realPots.length > 0) {
+          setPots(realPots);
+        } else {
+          setPots([{
+            id: 'mock-1', type: 'solo', emoji: '🏺', name: 'My First Pot',
+            target: 1000, saved: 0, unlockDate: '2027-01-01',
+            daysLeft: 365,
+            members: [{ handle: 'you', color: '#F97316', paid: true, share: 1000 }]
+          }]);
+        }
+      } catch (e) {
+        console.error("Failed to fetch pots", e);
+      }
     }
     loadPots();
-  }, [potCount, publicClient]);
+  }, [publicClient, address]);
 
   const handleCreatePot = async () => {
     if (!potName || !potTarget || !potLockDays || !publicClient) return;
