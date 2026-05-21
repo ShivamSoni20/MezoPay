@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { DM_Sans, Syne } from "next/font/google";
 import { AppProviders } from "@/components/AppProviders";
+import { XmtpProviderWrapper } from "./context/XmtpProviderWrapper";
 import "./globals.css";
 
 const dmSans = DM_Sans({
@@ -60,7 +61,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${dmSans.variable} ${syne.variable} h-full`}>
       <body className="min-h-full">
-        <AppProviders>{children}</AppProviders>
+        <XmtpProviderWrapper><AppProviders>{children}</AppProviders></XmtpProviderWrapper>
       </body>
     </html>
   );

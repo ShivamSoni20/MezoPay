@@ -55,24 +55,44 @@ async function revokeStaleInstallations(
 ): Promise<void> {
   const backend = await createBackend({ env: getXmtpEnv() });
   const inboxId = await getInboxIdForIdentifier(backend, identifier);
+  console.log("revokeStaleInstallations: inboxId", inboxId);
   if (!inboxId) return;
 
   const states = await Client.fetchInboxStates([inboxId], backend);
   const installations = states[0]?.installations ?? [];
+  console.log("revokeStaleInstallations: found installations", installations.length, installations);
   if (installations.length === 0) return;
 
   const installationIds = installations.map((inst) => {
-    const id = inst.id as string | Uint8Array;
-    if (typeof id === "string" && isHex(id)) {
-      return hexToBytes(id);
+    let id = inst.id as any;
+    // in wasm-bindings, inst.bytes is the raw Uint8Array for the installation id.
+    if (inst.bytes instanceof Uint8Array) {
+      id = inst.bytes;
+    } else if (typeof id === "string" && isHex(id)) {
+      id = hexToBytes(id);
+    } else if (typeof id === "string") {
+      // XMTP sometimes uses hex without 0x prefix for installation ids
+      try {
+        if (/^[0-9a-fA-F]+$/.test(id)) {
+           id = hexToBytes(("0x" + id) as `0x${string}`);
+        } else {
+           id = new TextEncoder().encode(id);
+        }
+      } catch {
+        id = new TextEncoder().encode(id);
+      }
     }
-    if (typeof id === "object" && id !== null && "byteLength" in id) {
-      return id as Uint8Array;
-    }
-    return new TextEncoder().encode(String(id));
+    return id;
   });
+  console.log("revokeStaleInstallations: revoking ids", installationIds);
 
-  await Client.revokeInstallations(signer, inboxId, installationIds, backend);
+  try {
+    await Client.revokeInstallations(signer, inboxId, installationIds, backend);
+    console.log("revokeStaleInstallations: success");
+  } catch (err) {
+    console.error("revokeStaleInstallations: error revoking", err);
+    throw err;
+  }
 }
 
 /** Resumes an existing XMTP inbox from this browser (no MetaMask prompt). */

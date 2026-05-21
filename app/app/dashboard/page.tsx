@@ -39,35 +39,6 @@ export default function DashboardPage() {
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [showXmtpPrompt, setShowXmtpPrompt] = useState(false);
-
-  const xmtpDismissKey = address
-    ? `mezopay_xmtp_prompt_dismiss_${address.toLowerCase()}`
-    : null;
-
-  useEffect(() => {
-    if (!address || xmtpStatus === "connected" || xmtpStatus === "connecting") {
-      setShowXmtpPrompt(false);
-      return;
-    }
-    if (xmtpDismissKey && sessionStorage.getItem(xmtpDismissKey) === "1") {
-      setShowXmtpPrompt(false);
-      return;
-    }
-    setShowXmtpPrompt(true);
-  }, [address, xmtpStatus, xmtpDismissKey]);
-
-  const dismissXmtpPrompt = () => {
-    if (xmtpDismissKey) {
-      sessionStorage.setItem(xmtpDismissKey, "1");
-    }
-    setShowXmtpPrompt(false);
-  };
-
-  const handleEnableXmtpFromPrompt = async () => {
-    const ok = await initXmtp();
-    if (ok) setShowXmtpPrompt(false);
-  };
 
   // Recalculate owed stats from context lists or fallback to match HTML values
   const owedByFriends = friends
@@ -223,74 +194,6 @@ export default function DashboardPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div
-        className={`modal-overlay${showXmtpPrompt ? " open" : ""}`}
-        onClick={dismissXmtpPrompt}
-        role="presentation"
-      >
-        <div
-          className="modal"
-          onClick={(e) => e.stopPropagation()}
-          role="dialog"
-          aria-labelledby="xmtp-prompt-title"
-        >
-          <div className="modal-title">
-            <span id="xmtp-prompt-title">Enable payment alerts</span>
-            <button
-              type="button"
-              className="modal-close"
-              onClick={dismissXmtpPrompt}
-              aria-label="Close"
-            >
-              ×
-            </button>
-          </div>
-          <p
-            className="text-sm leading-normal mb-4"
-            style={{ color: "var(--gray)" }}
-          >
-            Turn on your encrypted XMTP inbox to get instant notifications when
-            someone requests MUSD from you. You only sign once in MetaMask —
-            we reconnect automatically next time.
-          </p>
-          <ul
-            className="text-sm mb-5"
-            style={{ color: "var(--ink)", paddingLeft: "18px", lineHeight: 1.6 }}
-          >
-            <li>Live payment request toasts</li>
-            <li>Pending requests without refreshing</li>
-            <li>Settlement updates when you get paid</li>
-          </ul>
-          <button
-            type="button"
-            className="f-submit"
-            onClick={handleEnableXmtpFromPrompt}
-            disabled={xmtpStatus === "connecting"}
-          >
-            {xmtpStatus === "connecting"
-              ? "Confirm in MetaMask…"
-              : "Enable XMTP Notifications"}
-          </button>
-          <button
-            type="button"
-            onClick={dismissXmtpPrompt}
-            style={{
-              width: "100%",
-              marginTop: "10px",
-              padding: "10px",
-              background: "transparent",
-              border: "none",
-              color: "var(--gray)",
-              fontSize: "0.82rem",
-              fontWeight: 600,
-              cursor: "pointer",
-            }}
-          >
-            Maybe later
-          </button>
-        </div>
-      </div>
-
       {/* BALANCES ROW */}
       <div className="bal-row">
         <div className="bal-card primary">

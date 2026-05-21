@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useApp } from "../context";
 
-type FilterType = "all" | "sent" | "received" | "split" | "yield";
+type FilterType = "all" | "sent" | "received" | "split" | "saving pots history";
 
 export default function HistoryPage() {
   const { history } = useApp();
@@ -25,7 +25,7 @@ export default function HistoryPage() {
 
       {/* FILTER TABS */}
       <div className="hist-filter">
-        {(["all", "sent", "received", "split", "yield"] as const).map((type) => (
+        {(["all", "sent", "received", "split", "saving pots history"] as const).map((type) => (
           <button
             key={type}
             className={`h-filter-btn ${filter === type ? "active" : ""}`}
@@ -45,7 +45,7 @@ export default function HistoryPage() {
           </div>
         ) : (
           filteredHistory.map((tx) => {
-            const isReceived = tx.type === "received" || tx.type === "yield";
+            const isReceived = tx.type === "received" || tx.type === "saving pots history";
             const amtColor = isReceived ? "up" : "dn";
             const labelPrefix = isReceived ? "+" : "-";
 
@@ -58,7 +58,7 @@ export default function HistoryPage() {
             } else if (tx.type === "split") {
               icon = "⚖️";
               iconClass = "split-ic";
-            } else if (tx.type === "yield") {
+            } else if (tx.type === "saving pots history") {
               icon = "📈";
               iconClass = "yield-ic";
             }

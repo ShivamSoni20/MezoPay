@@ -33,6 +33,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [toastMsg, setToastMsg] = useState("");
   const [toastAmt, setToastAmt] = useState("");
   const [showToastBar, setShowToastBar] = useState(false);
+  const [showXmtpModal, setShowXmtpModal] = useState(false);
 
   // Custom data states (empty by default, no fake data!)
   const [tabs, setTabs] = useState<any[]>([]);
@@ -169,14 +170,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   const attachXmtpClient = useCallback(
     async (client: Client<unknown>, silent: boolean) => {
-      await client.conversations.syncAll([ConsentState.Allowed]);
+      await client.conversations.syncAll([ConsentState.Allowed, ConsentState.Unknown]);
 
       xmtpClientRef.current = client;
       setXmtpClient(client);
       setXmtpStatus("connected");
 
       const stream = await client.conversations.streamAllMessages({
-        consentStates: [ConsentState.Allowed],
+        consentStates: [ConsentState.Allowed, ConsentState.Unknown],
         onValue: (message) => {
           if (!address) return;
           handleIncomingMessage(message, {
@@ -205,9 +206,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     [address, refreshRequests],
   );
 
-  const resumeXmtp = useCallback(async (): Promise<boolean> => {
-    if (!address || !walletClient || initInFlightRef.current || xmtpClientRef.current) {
+  const resumeXmtp = useCallback(async (): Promise<boolean | null> => {
+    if (!address || !walletClient || xmtpClientRef.current) {
       return !!xmtpClientRef.current;
+    }
+    if (initInFlightRef.current) {
+      return null;
     }
 
     initInFlightRef.current = true;
@@ -282,11 +286,20 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   // Silent resume when wallet connects (one-time MetaMask was already done).
   useEffect(() => {
-    if (address && walletClient) {
-      resumeXmtp();
-    } else {
-      cleanupXmtp();
-    }
+    const checkXmtp = async () => {
+      if (address && walletClient) {
+        const success = await resumeXmtp();
+        if (success === false) {
+          const dismissed = sessionStorage.getItem(`xmtp_dismiss_${address}`);
+          if (!dismissed) {
+            setShowXmtpModal(true);
+          }
+        }
+      } else {
+        cleanupXmtp();
+      }
+    };
+    checkXmtp();
   }, [address, walletClient?.account?.address]);
 
   const sendPaymentRequest = useCallback(
@@ -1020,6 +1033,38 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <span>Settings</span>
           </Link>
         </div>
+
+        {/* XMTP Enable Modal */}
+        {showXmtpModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)" }}>
+            <div className="bg-white p-6 rounded-xl shadow-xl" style={{ background: "white", padding: "24px", borderRadius: "14px", border: "1px solid var(--border)", maxWidth: "400px", width: "100%", margin: "0 16px", boxShadow: "0 10px 25px rgba(0,0,0,0.1)" }}>
+              <h3 className="font-bold mb-2" style={{ fontFamily: "var(--font-syne), sans-serif", fontSize: "1.25rem", fontWeight: 800, marginBottom: "8px" }}>Enable XMTP Messages</h3>
+              <p className="text-sm mb-6" style={{ fontSize: "0.875rem", color: "var(--gray)", marginBottom: "24px" }}>
+                Sign a message in your wallet to enable encrypted notifications and payment requests via XMTP.
+              </p>
+              <div className="flex gap-3" style={{ display: "flex", gap: "12px" }}>
+                <button
+                  onClick={() => {
+                    if (address) sessionStorage.setItem(`xmtp_dismiss_${address}`, "1");
+                    setShowXmtpModal(false);
+                  }}
+                  style={{ flex: 1, padding: "10px 16px", background: "var(--gray-light)", border: "1px solid var(--border)", borderRadius: "9px", fontSize: "0.875rem", fontWeight: 700, color: "var(--dark)", cursor: "pointer" }}
+                >
+                  Skip for now
+                </button>
+                <button
+                  onClick={async () => {
+                    setShowXmtpModal(false);
+                    await initXmtp();
+                  }}
+                  style={{ flex: 1, padding: "10px 16px", background: "var(--orange)", border: "none", borderRadius: "9px", fontSize: "0.875rem", fontWeight: 700, color: "white", cursor: "pointer", boxShadow: "0 4px 12px rgba(249,115,22,0.2)" }}
+                >
+                  Enable XMTP
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* TOAST SYSTEM */}
         <div id="toast" className={showToastBar ? "show" : ""}>

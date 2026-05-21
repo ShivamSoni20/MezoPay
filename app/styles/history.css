@@ -1,0 +1,96 @@
+.history-container {
+  max-width: 1200px;
+  margin: 2rem auto;
+  padding: 0 1rem;
+  font-family: var(--font-outfit, 'Outfit', sans-serif);
+}
+
+.history-title {
+  font-size: 2.2rem;
+  font-weight: 600;
+  text-align: center;
+  margin-bottom: 1.5rem;
+  color: hsl(210, 20%, 95%);
+}
+
+.history-info {
+  text-align: center;
+  font-size: 1rem;
+  color: hsl(210, 15%, 70%);
+}
+
+.history-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1.5rem;
+  padding: 1rem 0;
+}
+
+.history-card {
+  background: rgba(255, 255, 255, 0.07);
+  backdrop-filter: blur(10px);
+  border-radius: 12px;
+  padding: 1rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  color: hsl(210, 20%, 95%);
+}
+
+.history-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+}
+
+.history-peer {
+  font-size: 1.1rem;
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+  color: hsl(210, 30%, 80%);
+}
+
+.history-messages {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+.history-message {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.4rem;
+  font-size: 0.9rem;
+  line-height: 1.3;
+}
+
+.history-text {
+  flex: 1;
+  margin-right: 0.5rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.history-ts {
+  color: hsl(210, 10%, 60%);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.history-clear-btn {
+  margin: 2rem auto 0;
+  display: block;
+  background: hsla(210, 50%, 40%, 0.2);
+  color: hsl(210, 30%, 90%);
+  border: none;
+  border-radius: 8px;
+  padding: 0.7rem 1.2rem;
+  cursor: pointer;
+  font-size: 0.95rem;
+  transition: background 0.2s ease;
+}
+
+.history-clear-btn:hover {
+  background: hsla(210, 50%, 40%, 0.35);
+}
