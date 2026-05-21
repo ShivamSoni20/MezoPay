@@ -791,7 +791,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     { label: "Send MUSD", icon: "↑", path: "/app/send" },
     { label: "Request", icon: "↓", path: "/app/request" },
     { label: "Split Tab", icon: "⚖️", path: "/app/split" },
-    { label: "Earn Yield", icon: "📈", path: "/app/earn", badge: "Live", badgeClass: "green" },
+    { label: "Savings Pots", icon: "🏺", path: "/app/earn", badge: "Live", badgeClass: "green" },
     { label: "Virtual Card", icon: "💳", path: "/app/card" },
     { label: "History", icon: "📋", path: "/app/history" },
     { label: "Friends", icon: "👥", path: "/app/friends" },

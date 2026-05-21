@@ -314,13 +314,13 @@ export default function DashboardPage() {
           <div className="bc-sub">Calculated from live splits</div>
           <div className="bc-chg dn">Due soon</div>
         </div>
-        <div className="bal-card">
-          <div className="bc-lbl">Yield Earned (Live)</div>
-          <div className="bc-val font-mono" style={{ color: "var(--teal)", fontSize: "1.35rem" }}>
-            ${yieldEarned.toFixed(6)}
+        <div className="bal-card" style={{ cursor: "pointer" }} onClick={() => router.push("/app/earn")}>
+          <div className="bc-lbl">Total in Savings Pots</div>
+          <div className="bc-val font-mono" style={{ color: "var(--orange)", fontSize: "1.35rem" }}>
+            🏺 View Pots
           </div>
-          <div className="bc-sub">Mezo Earn vault (2.4% APR)</div>
-          <div className="bc-chg up">↑ Real-Time Ticking</div>
+          <div className="bc-sub">Bitcoin-backed savings goals</div>
+          <div className="bc-chg up">Manage active pots →</div>
         </div>
       </div>
 

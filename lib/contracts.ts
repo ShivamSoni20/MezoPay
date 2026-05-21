@@ -9,6 +9,9 @@ export const CONTRACTS = {
   SPLIT_MANAGER:
     (process.env.NEXT_PUBLIC_SPLIT ||
       "0x9cd6D4A92939A1b93fBb3c848c2cF3e9f09D4C10") as `0x${string}`,
+  SAVINGS_POT:
+    (process.env.NEXT_PUBLIC_SAVINGS_POT ||
+      "0x72290EB00a06c4a5582c64e8E336F6e4D242bE87") as `0x${string}`,
 } as const;
 
 export const MUSD_ABI = [
@@ -39,4 +42,13 @@ export const SPLIT_ABI = [
   "function hasPaid(bytes32 tabId, address member) view returns (bool)",
   "function getUserTabs(address user) view returns (bytes32[])",
   "function totalAmount(bytes32 tabId) view returns (uint256)",
+] as const;
+
+export const SAVINGS_POT_ABI = [
+  "function createPot(string name, uint256 target, uint256 lockSeconds) returns (bytes32)",
+  "function deposit(bytes32 potId, uint256 amount)",
+  "function withdraw(bytes32 potId)",
+  "function getDeposit(bytes32 potId, address user) view returns (uint256)",
+  "function pots(bytes32) view returns (address creator, string name, uint256 targetAmount, uint256 totalDeposited, uint256 unlockTime, bool distributed)",
+  "function potCount() view returns (uint256)"
 ] as const;

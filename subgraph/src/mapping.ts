@@ -75,3 +75,47 @@ export function handleTransfer(event: TransferEvent): void {
   transfer.blockNumber = event.block.number
   transfer.save()
 }
+
+import { PotCreated, Deposited, Withdrawn } from "../generated/SavingsPot/SavingsPot"
+import { SavingsPot, PotDeposit, PotWithdrawal } from "../generated/schema"
+
+export function handlePotCreated(event: PotCreated): void {
+  let potId = event.params.potId.toHexString()
+  let pot = new SavingsPot(potId)
+  pot.creator = event.transaction.from // tx sender is creator
+  pot.name = event.params.name
+  pot.targetAmount = event.params.target
+  pot.totalDeposited = BigInt.fromI32(0)
+  pot.unlockTime = event.params.unlockTime
+  pot.createdAt = event.block.timestamp
+  pot.save()
+}
+
+export function handleDeposited(event: Deposited): void {
+  let potId = event.params.potId.toHexString()
+  let pot = SavingsPot.load(potId)
+  if (pot) {
+    pot.totalDeposited = pot.totalDeposited.plus(event.params.amount)
+    pot.save()
+
+    let depositId = event.transaction.hash.toHexString() + "-" + event.logIndex.toString()
+    let deposit = new PotDeposit(depositId)
+    deposit.pot = potId
+    deposit.user = event.params.user
+    deposit.amount = event.params.amount
+    deposit.timestamp = event.block.timestamp
+    deposit.save()
+  }
+}
+
+export function handleWithdrawn(event: Withdrawn): void {
+  let potId = event.params.potId.toHexString()
+  
+  let withdrawalId = event.transaction.hash.toHexString() + "-" + event.logIndex.toString()
+  let withdrawal = new PotWithdrawal(withdrawalId)
+  withdrawal.pot = potId
+  withdrawal.user = event.params.user
+  withdrawal.amount = event.params.amount
+  withdrawal.timestamp = event.block.timestamp
+  withdrawal.save()
+}

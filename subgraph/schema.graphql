@@ -33,3 +33,31 @@ type Transfer @entity {
   timestamp: BigInt!
   blockNumber: BigInt!
 }
+
+type SavingsPot @entity {
+  id: ID! # potId
+  creator: Bytes!
+  name: String!
+  targetAmount: BigInt!
+  totalDeposited: BigInt!
+  unlockTime: BigInt!
+  createdAt: BigInt!
+  deposits: [PotDeposit!]! @derivedFrom(field: "pot")
+  withdrawals: [PotWithdrawal!]! @derivedFrom(field: "pot")
+}
+
+type PotDeposit @entity {
+  id: ID! # txHash + logIndex
+  pot: SavingsPot!
+  user: Bytes!
+  amount: BigInt!
+  timestamp: BigInt!
+}
+
+type PotWithdrawal @entity {
+  id: ID! # txHash + logIndex
+  pot: SavingsPot!
+  user: Bytes!
+  amount: BigInt!
+  timestamp: BigInt!
+}

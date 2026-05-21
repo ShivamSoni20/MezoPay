@@ -69,3 +69,29 @@ dataSources:
         - event: Transfer(indexed address,indexed address,uint256)
           handler: handleTransfer
       file: UsernameRegistry\UsernameRegistry.wasm
+  - kind: ethereum
+    name: SavingsPot
+    network: mezo-testnet
+    source:
+      address: "0x72290EB00a06c4a5582c64e8E336F6e4D242bE87"
+      abi: SavingsPot
+      startBlock: 13148340
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - SavingsPot
+        - PotDeposit
+        - PotWithdrawal
+      abis:
+        - name: SavingsPot
+          file: SavingsPot\abis\SavingsPot.json
+      eventHandlers:
+        - event: PotCreated(indexed bytes32,string,uint256,uint256)
+          handler: handlePotCreated
+        - event: Deposited(indexed bytes32,indexed address,uint256)
+          handler: handleDeposited
+        - event: Withdrawn(indexed bytes32,indexed address,uint256)
+          handler: handleWithdrawn
+      file: UsernameRegistry\UsernameRegistry.wasm
