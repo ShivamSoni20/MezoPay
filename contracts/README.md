@@ -23,6 +23,7 @@ These contracts power **MezoPay**’s hackathon MVP on **Mezo testnet**:
 
 1. **`UsernameRegistry`** — Maps `@username` → wallet so the app never forces raw addresses on users.
 2. **`SplitManager`** — Group expense tabs settled in **MUSD**, with optional **EIP-2612 permit** gasless-style approvals.
+3. **`SavingsPot`** — Time-locked savings goals (solo or group) enforcing strict on-chain discipline.
 
 Both integrate the official testnet **MUSD** token — satisfying the hackathon requirement to build on **MUSD** for the Supernormal dApps track.
 
@@ -40,6 +41,7 @@ flowchart LR
     subgraph contracts["MezoPay Contracts"]
         REG[UsernameRegistry]
         SPLIT[SplitManager]
+        POT[SavingsPot]
     end
 
     subgraph mezo["Mezo Testnet"]
@@ -48,12 +50,14 @@ flowchart LR
 
     FE -->|register / resolve| REG
     FE -->|createTab / settle| SPLIT
+    FE -->|createPot / deposit| POT
     SPLIT -->|transfer / transferFrom / permit| MUSD
+    POT -->|transfer / transferFrom| MUSD
     SPLIT -.->|registry address stored| REG
 
     classDef cfill fill:#FFF7ED,stroke:#F97316,stroke-width:2px,color:#1A1108
     classDef mfill fill:#F0FDF4,stroke:#22C55E,stroke-width:2px,color:#1A1108
-    class REG,SPLIT cfill
+    class REG,SPLIT,POT cfill
     class MUSD mfill
 ```
 
@@ -111,15 +115,28 @@ sequenceDiagram
 
 **Events:** `TabCreated`, `MemberPaid`, `TabSettled`
 
+### `SavingsPot.sol`
+
+| Function | Description |
+|----------|-------------|
+| `createPot(target, lockTime)` | Create a savings goal pot with a strict unlock timestamp |
+| `deposit(potId, amount)` | Deposit MUSD into the pot (locked until time passes) |
+| `withdraw(potId)` | Withdraw MUSD after the unlock time has elapsed |
+
+**Constructor:** `SavingsPot(address musd)`
+
+**Events:** `PotCreated`, `Deposited`, `Withdrawn`
+
 ---
 
 ## Deployed addresses (testnet)
 
 | Contract | Address |
 |----------|---------|
-| MUSD (Mezo official) | `0x118917a40FAF1CD7a13dB0Ef56C86De7973Ac503` |
-| UsernameRegistry | `0x8eB4E69A550Dc63BaB674469eBC516d893793de8` |
-| SplitManager | `0x9cd6D4A92939A1b93fBb3c848c2cF3e9f09D4C10` |
+| MUSD (Mezo official) | [`0x118917a40FAF1CD7a13dB0Ef56C86De7973Ac503`](https://explorer.test.mezo.org/address/0x118917a40FAF1CD7a13dB0Ef56C86De7973Ac503) |
+| UsernameRegistry | [`0x8eB4E69A550Dc63BaB674469eBC516d893793de8`](https://explorer.test.mezo.org/address/0x8eB4E69A550Dc63BaB674469eBC516d893793de8) |
+| SplitManager | [`0x9cd6D4A92939A1b93fBb3c848c2cF3e9f09D4C10`](https://explorer.test.mezo.org/address/0x9cd6D4A92939A1b93fBb3c848c2cF3e9f09D4C10) |
+| SavingsPot | [`0x72290EB00a06c4a5582c64e8E336F6e4D242bE87`](https://explorer.test.mezo.org/address/0x72290EB00a06c4a5582c64e8E336F6e4D242bE87) |
 
 ---
 
@@ -159,6 +176,7 @@ forge script script/Deploy.s.sol:Deploy \
 
 1. `UsernameRegistry`
 2. `SplitManager(MUSD_TESTNET, registry)`
+3. `SavingsPot(MUSD_TESTNET)`
 
 Update frontend env vars:
 
@@ -186,7 +204,8 @@ Redeploy or update the [Goldsky subgraph](../subgraph/subgraph.yaml) `source.add
 contracts/
 ├── src/
 │   ├── UsernameRegistry.sol
-│   └── SplitManager.sol
+│   ├── SplitManager.sol
+│   └── SavingsPot.sol
 ├── script/
 │   └── Deploy.s.sol
 ├── test/

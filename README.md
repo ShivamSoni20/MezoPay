@@ -68,7 +68,7 @@ On-chain time-locked savings goals via `SavingsPot.sol`:
 ## Architecture
 
 ```mermaid
-%%{init: {'theme': 'base', 'themeVariables': {'fontFamily': 'DM Sans, sans-serif', 'primaryColor': '#FFF7ED', 'primaryTextColor': '#1A1108', 'primaryBorderColor': '#F97316', 'secondaryColor': '#F0FDF4', 'secondaryBorderColor': '#22C55E', 'tertiaryColor': '#EFF6FF', 'tertiaryBorderColor': '#3B82F6', 'lineColor': '#F97316'}}}%%
+%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#FFF7ED', 'primaryTextColor': '#1A1108', 'primaryBorderColor': '#F97316', 'secondaryColor': '#F0FDF4', 'secondaryBorderColor': '#22C55E', 'tertiaryColor': '#EFF6FF', 'tertiaryBorderColor': '#3B82F6', 'lineColor': '#F97316'}}}%%
 flowchart TB
     subgraph users["👤 Users"]
         U1[Sender]
@@ -114,7 +114,7 @@ flowchart TB
     SPLIT --> MUSD
     SPLIT --> REG
     POT --> MUSD
-    XMTP -.->|mezopay_request / settled / invites| U2
+    XMTP -.->|requests & invites| U2
 
     classDef mezo fill:#F0FDF4,stroke:#22C55E,stroke-width:2px,color:#1A1108
     classDef front fill:#FFF7ED,stroke:#F97316,stroke-width:2px,color:#1A1108
