@@ -79,7 +79,7 @@ export default function HistoryPage() {
                     {labelPrefix}${Math.abs(tx.amount).toFixed(2)}
                   </div>
                   <div className="hist-date">{tx.date}</div>
-                  {tx.hash && (
+                  {tx.hash && tx.hash.startsWith("0x") && (
                     <a
                       href={explorerUrl}
                       target="_blank"
