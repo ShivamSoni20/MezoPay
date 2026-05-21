@@ -236,9 +236,10 @@ See [contracts/README.md](./contracts/README.md).
 
 | Contract | Address |
 |----------|---------|
-| MUSD (official testnet) | `0x118917a40FAF1CD7a13dB0Ef56C86De7973Ac503` |
-| UsernameRegistry | `0x8eB4E69A550Dc63BaB674469eBC516d893793de8` |
-| SplitManager | `0x9cd6D4A92939A1b93fBb3c848c2cF3e9f09D4C10` |
+| MUSD (official testnet) | [`0x118917a40FAF1CD7a13dB0Ef56C86De7973Ac503`](https://explorer.test.mezo.org/address/0x118917a40FAF1CD7a13dB0Ef56C86De7973Ac503) |
+| UsernameRegistry | [`0x8eB4E69A550Dc63BaB674469eBC516d893793de8`](https://explorer.test.mezo.org/address/0x8eB4E69A550Dc63BaB674469eBC516d893793de8) |
+| SplitManager | [`0x9cd6D4A92939A1b93fBb3c848c2cF3e9f09D4C10`](https://explorer.test.mezo.org/address/0x9cd6D4A92939A1b93fBb3c848c2cF3e9f09D4C10) |
+| SavingsPot | [`0x72290EB00a06c4a5582c64e8E336F6e4D242bE87`](https://explorer.test.mezo.org/address/0x72290EB00a06c4a5582c64e8E336F6e4D242bE87) |
 
 ---
 
