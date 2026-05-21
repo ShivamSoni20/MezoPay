@@ -15,6 +15,7 @@ const syne = Syne({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://mezopay.app"),
   title: "MezoPay - Gasless Venmo-style Payments & Group Bills on Mezo",
   description: "The ultimate decentralized Venmo on Mezo. Register case-insensitive @handles, send gasless MUSD via permit2, and split group tabs in a single transaction.",
   keywords: [
@@ -36,7 +37,7 @@ export const metadata: Metadata = {
     siteName: "MezoPay",
     images: [
       {
-        url: "https://raw.githubusercontent.com/mezo-org/branding/main/share-preview.png", // Swap this URL with your custom shared preview image link
+        url: "/banner.png",
         width: 1200,
         height: 630,
         alt: "MezoPay Preview Image",
@@ -49,7 +50,10 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "MezoPay - Gasless Venmo-style Payments & Group Bills on Mezo",
     description: "Decentralized Venmo on Mezo. Register case-insensitive @handles, send gasless MUSD via permit2, and split group tabs in a single transaction.",
-    images: ["https://raw.githubusercontent.com/mezo-org/branding/main/share-preview.png"], // Swap this URL with your custom shared preview image link
+    images: ["/banner.png"],
+  },
+  icons: {
+    icon: "/favicon.png",
   },
 };
 

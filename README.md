@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="./public/banner.png" alt="MezoPay Banner" width="100%" />
+
 # MezoPay
 
 **Self-service Bitcoin banking — send, request, split, and save MUSD by @username. No addresses, no banks, no gas confusion.**
