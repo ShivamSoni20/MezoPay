@@ -812,7 +812,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         setHistory,
         friends,
         setFriends,
-        yieldEarned,
         owedAmount,
         oweAmount,
         xmtpClient,

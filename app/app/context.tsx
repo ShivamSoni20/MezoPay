@@ -19,7 +19,6 @@ export interface AppContextType {
   setHistory: React.Dispatch<React.SetStateAction<any[]>>;
   friends: any[];
   setFriends: React.Dispatch<React.SetStateAction<any[]>>;
-  yieldEarned: number;
   owedAmount: number;
   oweAmount: number;
   xmtpClient: Client<unknown> | null;
