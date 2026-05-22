@@ -16,7 +16,7 @@ const syne = Syne({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://mezopay.app"),
+  metadataBase: new URL("https://mezopay.nikhilraikwar.me"),
   title: "MezoPay - Gasless Venmo-style Payments & Group Bills on Mezo",
   description: "The ultimate decentralized Venmo on Mezo. Register case-insensitive @handles, send gasless MUSD via permit2, and split group tabs in a single transaction.",
   keywords: [
@@ -34,7 +34,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "MezoPay - Gasless Venmo-style Payments & Group Bills on Mezo",
     description: "Decentralized Venmo on Mezo. Register case-insensitive @handles, send gasless MUSD via permit2, and split group tabs in a single transaction.",
-    url: "https://mezopay.app",
+    url: "https://mezopay.nikhilraikwar.me",
     siteName: "MezoPay",
     images: [
       {

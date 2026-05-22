@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAccount } from "wagmi";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
@@ -9,6 +9,65 @@ import { ConnectButton } from "@rainbow-me/rainbowkit";
 export default function Home() {
   const { isConnected } = useAccount();
   const router = useRouter();
+
+  const [phoneScreen, setPhoneScreen] = useState<"home" | "send" | "success">("home");
+  const [sendTo, setSendTo] = useState("");
+  const [sendAmount, setSendAmount] = useState("");
+  const [isSending, setIsSending] = useState(false);
+  const [showNewTx, setShowNewTx] = useState(false);
+
+  useEffect(() => {
+    let isCancelled = false;
+    const runDemoLoop = async () => {
+      await new Promise(r => setTimeout(r, 2000));
+      while (!isCancelled) {
+        if (isCancelled) break;
+        setPhoneScreen("send");
+        setSendTo("");
+        setSendAmount("");
+        setShowNewTx(false);
+        
+        await new Promise(r => setTimeout(r, 800));
+        if (isCancelled) break;
+
+        const targetUser = "@satoshi";
+        for (let i = 1; i <= targetUser.length; i++) {
+          if (isCancelled) break;
+          setSendTo(targetUser.slice(0, i));
+          await new Promise(r => setTimeout(r, 100));
+        }
+        
+        await new Promise(r => setTimeout(r, 400));
+        if (isCancelled) break;
+
+        const targetAmt = "15.00";
+        for (let i = 1; i <= targetAmt.length; i++) {
+          if (isCancelled) break;
+          setSendAmount(targetAmt.slice(0, i));
+          await new Promise(r => setTimeout(r, 150));
+        }
+        
+        await new Promise(r => setTimeout(r, 800));
+        if (isCancelled) break;
+
+        setIsSending(true);
+        await new Promise(r => setTimeout(r, 1200));
+        if (isCancelled) break;
+        
+        setIsSending(false);
+        setPhoneScreen("success");
+        setShowNewTx(true);
+        
+        await new Promise(r => setTimeout(r, 2500));
+        if (isCancelled) break;
+        
+        setPhoneScreen("home");
+        await new Promise(r => setTimeout(r, 3500));
+      }
+    };
+    runDemoLoop();
+    return () => { isCancelled = true; };
+  }, []);
 
   // Redirect to dashboard immediately if wallet is connected
   useEffect(() => {
@@ -295,12 +354,16 @@ export default function Home() {
         }
 
         .phone-shell {
-          width: 268px;
-          height: 544px;
-          background: var(--dark);
-          border-radius: 38px;
-          padding: 11px;
-          box-shadow: 0 40px 80px rgba(0,0,0,0.2), 0 0 0 2px #333;
+          width: 310px;
+          background: #111;
+          border-radius: 42px;
+          padding: 10px;
+          box-shadow:
+            0 0 0 1px rgba(255,255,255,0.08),
+            0 40px 80px rgba(0,0,0,0.6),
+            inset 0 1px 0 rgba(255,255,255,0.12);
+          position: relative;
+          z-index: 2;
           animation: float 4s ease-in-out infinite;
         }
 
@@ -309,145 +372,252 @@ export default function Home() {
           50% { transform: translateY(-11px); }
         }
 
-        .phone-screen {
-          background: #F9F9F9;
-          border-radius: 28px;
-          height: 100%;
-          overflow: hidden;
+        .phone-notch {
+          width: 80px; height: 22px;
+          background: #111;
+          border-radius: 0 0 16px 16px;
+          margin: 0 auto 6px;
           display: flex;
-          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
         }
 
-        .p-status {
-          background: white;
-          padding: 11px 15px 4px;
+        .notch-camera {
+          width: 8px; height: 8px;
+          border-radius: 50%;
+          background: #000;
+          border: 1px solid #222;
+        }
+
+        .notch-sensor {
+          width: 4px; height: 4px;
+          border-radius: 50%;
+          background: #000;
+        }
+
+        .phone-screen {
+          background: #0E0A05;
+          border-radius: 34px;
+          overflow: hidden;
+          height: 560px;
+          display: flex;
+          flex-direction: column;
+          color: white;
+        }
+
+        .p-statusbar {
           display: flex;
           justify-content: space-between;
-          font-size: 0.6rem;
-          font-weight: 700;
-          color: var(--dark);
+          padding: 12px 20px 4px;
+          font-size: 11px;
+          font-weight: 600;
+          color: rgba(255,255,255,0.9);
         }
 
         .p-header {
-          background: white;
-          padding: 6px 15px 11px;
-          border-bottom: 1px solid #F0F0F0;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 12px 20px;
         }
 
-        .p-name {
+        .p-app-name {
           font-family: 'Syne', sans-serif;
-          font-size: 0.97rem;
           font-weight: 800;
+          font-size: 1.1rem;
+        }
+        .p-app-name span { color: #F97316; }
+
+        .p-avatar {
+          width: 32px; height: 32px;
+          border-radius: 50%;
+          background: #3B82F6;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-weight: 700;
+          font-size: 12px;
         }
 
-        .p-balance {
-          padding: 13px 15px;
-          background: var(--orange);
-          color: white;
-          text-align: center;
+        .p-balance-card {
+          margin: 0 12px 12px;
+          background: linear-gradient(135deg, #1A1108 0%, #2D1A05 60%, rgba(249,115,22,0.15) 100%);
+          border: 1px solid rgba(249,115,22,0.2);
+          border-radius: 18px;
+          padding: 18px;
         }
 
-        .pbl {
-          font-size: 0.63rem;
-          opacity: 0.85;
-          margin-bottom: 3px;
+        .p-bal-lbl {
+          font-size: 11px;
+          color: rgba(255,255,255,0.6);
+          margin-bottom: 4px;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+          font-weight: 600;
         }
 
-        .pba {
+        .p-bal-amt {
           font-family: 'Syne', sans-serif;
-          font-size: 1.65rem;
+          font-size: 2.2rem;
           font-weight: 800;
+          line-height: 1;
+          margin-bottom: 8px;
         }
 
-        .pbs {
-          font-size: 0.6 flex;
-          opacity: 0.8;
-          margin-top: 3px;
+        .p-bal-sub {
+          font-size: 10px;
+          color: rgba(255,255,255,0.5);
         }
 
         .p-actions {
           display: grid;
           grid-template-columns: 1fr 1fr 1fr;
-          gap: 6px;
-          padding: 9px;
+          gap: 8px;
+          padding: 0 12px;
+          margin-bottom: 20px;
         }
 
-        .p-action {
-          background: white;
-          border-radius: 9px;
-          padding: 8px 4px;
+        .p-action-btn {
+          background: #1A1108;
+          border: 1px solid rgba(255,255,255,0.05);
+          border-radius: 14px;
+          padding: 12px 8px;
           text-align: center;
-          box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+          cursor: pointer;
+          transition: all 0.2s;
         }
 
-        .p-action .pi {
-          font-size: 0.95rem;
+        .p-action-btn:hover {
+          background: #2D1A05;
+          border-color: rgba(249,115,22,0.3);
         }
 
-        .p-action .pl {
-          font-size: 0.57rem;
-          font-weight: 700;
-          color: var(--gray);
-          margin-top: 2px;
+        .p-action-icon {
+          font-size: 18px;
+          margin-bottom: 6px;
         }
 
-        .p-slabel {
-          padding: 3px 12px;
-          font-size: 0.59rem;
-          font-weight: 700;
-          color: var(--gray);
-          text-transform: uppercase;
-          letter-spacing: 0.05em;
+        .p-action-lbl {
+          font-size: 11px;
+          font-weight: 600;
+          color: rgba(255,255,255,0.8);
+        }
+
+        .p-section-lbl {
+          padding: 0 20px;
+          font-size: 12px;
+          font-weight: 600;
+          color: rgba(255,255,255,0.5);
+          margin-bottom: 12px;
+        }
+
+        .p-tx-list {
+          flex: 1;
+          padding: 0 12px;
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+        .p-tx-list::-webkit-scrollbar {
+          display: none;
         }
 
         .p-tx {
           display: flex;
           align-items: center;
-          gap: 8px;
-          padding: 7px 11px;
-          background: white;
-          margin: 2px 9px;
-          border-radius: 9px;
+          gap: 12px;
+          padding: 12px;
+          background: #1A1108;
+          border-radius: 14px;
+          margin-bottom: 8px;
         }
 
-        .p-tx .av {
-          width: 27px;
-          height: 27px;
+        .p-tx-av {
+          width: 36px; height: 36px;
           border-radius: 50%;
           display: flex;
           align-items: center;
           justify-content: center;
-          font-size: 0.68rem;
           font-weight: 700;
+          font-size: 14px;
+        }
+
+        .p-tx-info { flex: 1; }
+        .p-tx-name { font-size: 13px; font-weight: 600; margin-bottom: 2px; }
+        .p-tx-note { font-size: 11px; color: rgba(255,255,255,0.5); }
+        .p-tx-amt { font-size: 14px; font-weight: 700; }
+        .p-tx-amt.pos { color: #22C55E; }
+        .p-tx-amt.neg { color: #EF4444; }
+
+        .p-send-form {
+          margin: 0 12px;
+          background: #1A1108;
+          border: 1px solid rgba(255,255,255,0.05);
+          border-radius: 18px;
+          padding: 20px;
+        }
+
+        .p-form-label {
+          font-size: 11px;
+          color: rgba(255,255,255,0.5);
+          margin-bottom: 8px;
+          font-weight: 600;
+          text-transform: uppercase;
+        }
+
+        .p-form-input {
+          width: 100%;
+          background: #0E0A05;
+          border: 1px solid rgba(255,255,255,0.1);
+          border-radius: 10px;
+          padding: 12px 14px;
           color: white;
-          flex-shrink: 0;
+          font-family: 'DM Mono', monospace;
+          font-size: 14px;
+          margin-bottom: 16px;
+          outline: none;
         }
 
-        .p-tx .txi {
-          flex: 1;
-        }
-
-        .p-tx .txn {
-          font-size: 0.65rem;
+        .p-form-input.amt {
+          font-size: 24px;
+          font-family: 'Syne', sans-serif;
           font-weight: 700;
+          padding: 16px 14px;
         }
 
-        .p-tx .txs {
-          font-size: 0.57rem;
-          color: var(--gray);
+        .p-form-input.typing {
+          border-color: #F97316;
+          box-shadow: 0 0 0 2px rgba(249,115,22,0.2);
         }
 
-        .p-tx .txa {
-          font-size: 0.68rem;
-          font-weight: 800;
+        .p-send-btn {
+          width: 100%;
+          background: #F97316;
+          color: white;
+          border: none;
+          padding: 14px;
+          border-radius: 10px;
+          font-weight: 700;
+          font-size: 14px;
+          cursor: pointer;
         }
 
-        .p-tx .pos {
-          color: var(--green);
+        .p-send-btn.sending {
+          background: #EA6500;
+          opacity: 0.8;
         }
 
-        .p-tx .neg {
-          color: var(--red);
+        .p-toast {
+          margin: auto 12px;
+          background: rgba(34, 197, 94, 0.15);
+          border: 1px solid rgba(34, 197, 94, 0.3);
+          color: #22C55E;
+          padding: 16px;
+          border-radius: 12px;
+          font-size: 13px;
+          font-weight: 600;
+          text-align: center;
+          line-height: 1.4;
         }
 
         .fc {
@@ -689,10 +859,30 @@ export default function Home() {
         }
 
         /* TECH SECTION & BENTO GRID */
+        .tech-wrapper {
+          background: #0E0A05;
+          padding-bottom: 60px;
+        }
+
         .tech {
           padding: 78px 5%;
           max-width: 1200px;
           margin: 0 auto;
+        }
+
+        .tech .sec-title {
+          color: white;
+          font-family: 'Syne', sans-serif;
+          font-weight: 800;
+          font-size: 3.5rem;
+        }
+
+        .tech .sec-sub {
+          color: rgba(255,255,255,0.6);
+          font-size: 1rem;
+          margin-top: 12px;
+          max-width: 500px;
+          line-height: 1.6;
         }
 
         .tech-grid {
@@ -703,10 +893,10 @@ export default function Home() {
         }
 
         .tech-card {
-          background: white;
+          background: #1A1108;
           border-radius: 20px;
           padding: 28px;
-          border: 1px solid var(--border);
+          border: 1px solid rgba(255,255,255,0.05);
           transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
           position: relative;
           overflow: hidden;
@@ -718,17 +908,7 @@ export default function Home() {
         .tech-card:hover {
           transform: translateY(-5px);
           box-shadow: 0 12px 30px rgba(249, 115, 22, 0.08);
-          border-color: var(--orange-mid);
-        }
-
-        .tech-card.large {
-          grid-column: span 2;
-          background: linear-gradient(145deg, #ffffff, #FFF7ED);
-          border-color: var(--orange-mid);
-        }
-
-        .tech-card.medium {
-          grid-column: span 1;
+          border-color: rgba(249, 115, 22, 0.3);
         }
 
         .tc-header {
@@ -739,27 +919,19 @@ export default function Home() {
         }
 
         .tc-icon {
-          width: 46px;
-          height: 46px;
-          border-radius: 14px;
-          background: var(--orange-light);
-          display: flex;
-          align-items: center;
-          justify-content: center;
           font-size: 1.35rem;
-          border: 1px solid rgba(249, 115, 22, 0.15);
         }
 
         .tc-title {
           font-family: 'Syne', sans-serif;
           font-weight: 700;
           font-size: 1.05rem;
-          color: var(--dark);
+          color: white;
         }
 
         .tc-desc {
           font-size: 0.88rem;
-          color: var(--gray);
+          color: rgba(255,255,255,0.6);
           line-height: 1.6;
         }
 
@@ -772,27 +944,26 @@ export default function Home() {
           border-radius: 999px;
           font-size: 0.72rem;
           font-weight: 700;
-          background: var(--orange-light);
+          background: rgba(249, 115, 22, 0.1);
           color: var(--orange);
-          border: 1px solid rgba(249, 115, 22, 0.2);
+          font-family: 'DM Mono', monospace;
+          text-decoration: none;
+          transition: all 0.2s;
         }
-
-        .tech-note {
-          margin-top: 24px;
-          padding: 14px 20px;
-          background: var(--orange-light);
-          border-left: 4px solid var(--orange);
-          border-radius: 8px;
-          font-size: 0.85rem;
-          color: var(--dark);
-          line-height: 1.6;
+        
+        .tc-badge:hover {
+          background: var(--orange);
+          color: white;
         }
 
         /* CTA */
         .cta-banner {
-          margin: 56px 5%;
+          margin: 56px auto;
+          max-width: 1100px;
+          width: 90%;
           border-radius: 21px;
-          background: linear-gradient(135deg, var(--dark) 0%, #3D2000 100%);
+          background: linear-gradient(135deg, #2D1A05 0%, #1A1108 100%);
+          border: 1px solid rgba(249, 115, 22, 0.15);
           padding: 56px;
           display: flex;
           align-items: center;
@@ -815,17 +986,48 @@ export default function Home() {
 
         .cta-banner h2 {
           font-family: 'Syne', sans-serif;
-          font-size: 1.85rem;
+          font-size: 2.2rem;
           font-weight: 800;
           color: white;
-          margin-bottom: 11px;
+          margin-bottom: 16px;
         }
 
         .cta-banner p {
           color: rgba(255, 255, 255, 0.65);
-          font-size: 0.88rem;
+          font-size: 0.95rem;
           line-height: 1.65;
-          max-width: 410px;
+          max-width: 500px;
+        }
+
+        .cta-btns {
+          display: flex;
+          gap: 16px;
+          align-items: center;
+          z-index: 2;
+        }
+
+        .cta-orange {
+          background: var(--orange);
+          color: white;
+          border: none;
+          border-radius: 11px;
+          padding: 14px 28px;
+          font-size: 1rem;
+          font-weight: 800;
+          font-family: 'Syne', sans-serif;
+          cursor: pointer;
+          white-space: nowrap;
+          transition: all 0.2s;
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          text-decoration: none;
+        }
+
+        .cta-orange:hover {
+          background: var(--orange-dark);
+          transform: translateY(-2px);
+          box-shadow: 0 8px 24px rgba(249, 115, 22, 0.4);
         }
 
         .cta-white {
@@ -833,25 +1035,28 @@ export default function Home() {
           color: var(--dark);
           border: none;
           border-radius: 11px;
-          padding: 13px 24px;
-          font-size: 0.92rem;
+          padding: 14px 28px;
+          font-size: 1rem;
           font-weight: 800;
           font-family: 'Syne', sans-serif;
           cursor: pointer;
           white-space: nowrap;
           transition: all 0.2s;
           text-decoration: none;
-          display: inline-block;
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
         }
 
         .cta-white:hover {
           transform: translateY(-2px);
-          box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+          box-shadow: 0 8px 24px rgba(255,255,255,0.2);
         }
 
+        /* FOOTER */
         .landing-footer {
-          background: var(--gray-light);
-          border-top: 1px solid var(--border);
+          background: transparent;
+          border-top: 1px solid rgba(255,255,255,0.05);
           padding: 36px 5%;
           display: flex;
           align-items: center;
@@ -863,7 +1068,7 @@ export default function Home() {
         .footer-logo {
           font-family: 'Syne', sans-serif;
           font-weight: 800;
-          color: var(--dark);
+          color: white;
           font-size: 0.97rem;
         }
 
@@ -875,18 +1080,18 @@ export default function Home() {
 
         .footer-links a {
           text-decoration: none;
-          color: var(--gray);
+          color: rgba(255,255,255,0.5);
           font-size: 0.82rem;
           transition: color 0.2s;
         }
 
         .footer-links a:hover {
-          color: var(--dark);
+          color: white;
         }
 
         .footer-note {
           font-size: 0.77rem;
-          color: var(--gray);
+          color: rgba(255,255,255,0.4);
         }
 
         @media (max-width: 900px) {
@@ -998,76 +1203,100 @@ export default function Home() {
             </div>
           </div>
           <div className="hero-visual">
-            <div className="fc l">
-              <div className="fcl">Tab settled ✓</div>
-              <div className="fcv">+$30.00 MUSD</div>
-            </div>
             <div className="phone-shell">
-              <div className="phone-screen">
-                <div className="p-status">
+              <div className="phone-notch">
+                <div className="notch-camera"></div>
+                <div className="notch-sensor"></div>
+              </div>
+              <div className="phone-screen" id="phoneScreen">
+                <div className="p-statusbar">
                   <span>9:41</span>
-                  <span>●●●</span>
+                  <span>●●● ▲ 🔋</span>
                 </div>
                 <div className="p-header">
-                  <div className="p-name">MezoPay.</div>
+                  <div className="p-app-name">MezoPay<span>.</span></div>
+                  <div className="p-avatar">AJ</div>
                 </div>
-                <div className="p-balance">
-                  <div className="pbl">MUSD Balance</div>
-                  <div className="pba">$248.50</div>
-                  <div className="pbs">Bitcoin-backed · Earning yield</div>
-                </div>
-                <div className="p-actions">
-                  <div className="p-action">
-                    <div className="pi">↑</div>
-                    <div className="pl">Send</div>
+                
+                {phoneScreen === "home" && (
+                  <>
+                    <div className="p-balance-card">
+                      <div className="p-bal-lbl">MUSD Balance</div>
+                      <div className="p-bal-amt" id="balanceDisplay">$1,258.00</div>
+                      <div className="p-bal-sub">⚡ Bitcoin-backed · EIP-2612 gasless</div>
+                    </div>
+                    <div className="p-actions">
+                      <div className="p-action-btn">
+                        <div className="p-action-icon">↑</div>
+                        <div className="p-action-lbl">Send</div>
+                      </div>
+                      <div className="p-action-btn">
+                        <div className="p-action-icon">↓</div>
+                        <div className="p-action-lbl">Request</div>
+                      </div>
+                      <div className="p-action-btn">
+                        <div className="p-action-icon">⚖️</div>
+                        <div className="p-action-lbl">Split</div>
+                      </div>
+                    </div>
+                    <div className="p-section-lbl" id="actLabel">Recent Activity</div>
+                    <div className="p-tx-list" id="txList" style={{ overflowY: 'auto' }}>
+                      {showNewTx && (
+                        <div className="p-tx">
+                          <div className="p-tx-av" style={{background: '#EAB308'}}>S</div>
+                          <div className="p-tx-info">
+                            <div className="p-tx-name">@satoshi</div>
+                            <div className="p-tx-note">Sent MUSD</div>
+                          </div>
+                          <div className="p-tx-amt neg">-$15.00</div>
+                        </div>
+                      )}
+                      <div className="p-tx">
+                        <div className="p-tx-av" style={{background: '#F97316'}}>A</div>
+                        <div className="p-tx-info">
+                          <div className="p-tx-name">@alex</div>
+                          <div className="p-tx-note">🍕 Pizza night</div>
+                        </div>
+                        <div className="p-tx-amt pos">+$30.00</div>
+                      </div>
+                      <div className="p-tx">
+                        <div className="p-tx-av" style={{background: '#8B5CF6'}}>S</div>
+                        <div className="p-tx-info">
+                          <div className="p-tx-name">@sarah</div>
+                          <div className="p-tx-note">🎬 Movie tickets</div>
+                        </div>
+                        <div className="p-tx-amt neg">-$15.00</div>
+                      </div>
+                      <div className="p-tx">
+                        <div className="p-tx-av" style={{background: '#06B6D4'}}>M</div>
+                        <div className="p-tx-info">
+                          <div className="p-tx-name">@mike</div>
+                          <div className="p-tx-note">☕ Coffee</div>
+                        </div>
+                        <div className="p-tx-amt pos">+$6.25</div>
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {phoneScreen === "send" && (
+                  <div className="p-send-form visible">
+                    <div className="p-form-label">To @username</div>
+                    <input className={`p-form-input ${sendTo ? 'typing' : ''}`} value={sendTo} placeholder="@friend" readOnly />
+                    <div className="p-form-label">Amount (MUSD)</div>
+                    <input className="p-form-input amt" value={sendAmount} placeholder="$0.00" readOnly />
+                    <button className={`p-send-btn ${isSending ? 'sending' : ''}`}>
+                      {isSending ? "Sending on Mezo..." : "Send MUSD →"}
+                    </button>
                   </div>
-                  <div className="p-action">
-                    <div className="pi">↓</div>
-                    <div className="pl">Request</div>
+                )}
+
+                {phoneScreen === "success" && (
+                  <div className="p-toast show">
+                    ✅ Sent ${sendAmount} to {sendTo} — confirmed!
                   </div>
-                  <div className="p-action">
-                    <div className="pi">⚖</div>
-                    <div className="pl">Split</div>
-                  </div>
-                </div>
-                <div className="p-slabel">Recent Activity</div>
-                <div className="p-tx">
-                  <div className="av" style={{ background: "#F97316" }}>A</div>
-                  <div className="txi">
-                    <div className="txn">@alex</div>
-                    <div className="txs">🍕 Dinner split</div>
-                  </div>
-                  <div className="txa pos">+$30.00</div>
-                </div>
-                <div className="p-tx">
-                  <div className="av" style={{ background: "#8B5CF6" }}>S</div>
-                  <div className="txi">
-                    <div className="txn">@sarah</div>
-                    <div className="txs">🎬 Movie</div>
-                  </div>
-                  <div className="txa neg">-$15.00</div>
-                </div>
-                <div className="p-tx">
-                  <div className="av" style={{ background: "#06B6D4" }}>M</div>
-                  <div className="txi">
-                    <div className="txn">@mike</div>
-                    <div className="txs">☕ Coffee</div>
-                  </div>
-                  <div className="txa pos">+$6.25</div>
-                </div>
-                <div className="p-tx">
-                  <div className="av" style={{ background: "#10B981" }}>R</div>
-                  <div className="txi">
-                    <div className="txn">@raj</div>
-                    <div className="txs">🏕 Camping trip</div>
-                  </div>
-                  <div className="txa neg">-$45.00</div>
-                </div>
+                )}
               </div>
-            </div>
-            <div className="fc r">
-              <div className="fcl">Savings Pots</div>
-              <div className="fcv">Live</div>
             </div>
           </div>
         </section>
@@ -1111,15 +1340,15 @@ export default function Home() {
                 <div className="f-icon">🔐</div>
                 <h3>Mezo Passport Identity</h3>
                 <p>
-                  @mezo-org/passport v0.1.0. Users sign up with email or social — wallet created silently. UsernameRegistry.sol maps @handles → addresses on-chain. Zero address friction.
+                  No seed phrases. No 0x addresses. Users sign up with just an email or social account. Our on-chain Username Registry maps handles like @satoshi instantly, making onboarding as frictionless as Web2.
                 </p>
                 <span className="f-pill">✓ MVP · Testnet ready</span>
               </div>
               <div className="feature-card">
                 <div className="f-icon">⚡</div>
-                <h3>Gasless EIP-712 Permit2</h3>
+                <h3>Free, Instant MUSD Transfers</h3>
                 <p>
-                  MUSD is permit2 + EIP-2612. Senders sign off-chain; gas is covered by sender — receivers never need BTC for gas. No approval transaction. Fully confirmed on Mezo testnet.
+                  Bitcoin should be as normal as using your phone. Through background EIP-2612 magic, users send MUSD instantly without ever holding native tokens for gas or signing approval transactions.
                 </p>
                 <span className="f-pill">✓ MVP · Testnet ready</span>
               </div>
@@ -1127,15 +1356,15 @@ export default function Home() {
                 <div className="f-icon">⚖️</div>
                 <h3>Group Tab Splitting</h3>
                 <p>
-                  SplitManager.sol stores tab state on-chain. createTab() + settleTab() loops MUSD.transferFrom for all members in 1 tx. Works for dinner, rent, trips — any group spend.
+                  Built for the Social & Creator Economy. Splitting dinner, rent, or trips is now a single tap. Our on-chain SplitManager contract batch-settles all group debts instantly in MUSD without middlemen.
                 </p>
                 <span className="f-pill">✓ MVP · Testnet ready</span>
               </div>
               <div className="feature-card">
                 <div className="f-icon">📡</div>
-                <h3>Goldsky Activity Feed</h3>
+                <h3>Venmo-Style Social Feed</h3>
                 <p>
-                  Subgraph indexes all Transfer events on Chain 31611. Clean GraphQL powers real-time activity feed, balance history, and friends list. goldsky subgraph deploy mezopay/v1
+                  Money is social. Powered by a real-time Goldsky subgraph, MezoPay features a live activity feed so you can see when friends settle tabs or reach their savings goals.
                 </p>
                 <span className="f-pill">✓ MVP · Testnet ready</span>
               </div>
@@ -1149,11 +1378,11 @@ export default function Home() {
               </div>
               <div className="feature-card">
                 <div className="f-icon">💳</div>
-                <h3>Virtual Debit Card</h3>
+                <h3>Tap-to-Pay Virtual Card</h3>
                 <p>
-                  Full card UI in MVP — card number, MUSD balance, simulated tap-to-pay. Real issuance via Marqeta/Lithic + Mastercard is Phase 2. Demo shows the full vision — Phase 2 with Marqeta/Lithic integration.
+                  Bridging MUSD to the real world. A full virtual debit card UI designed for everyday commerce. Spend your Bitcoin-backed stablecoins at any physical merchant terminal (Phase 2 Marqeta integration).
                 </p>
-                <span className="f-pill phase2">→ Phase 2 · Demo mode in MVP</span>
+                <span className="f-pill phase2">→ Coming Soon · Phase 2</span>
               </div>
             </div>
           </div>
@@ -1162,142 +1391,145 @@ export default function Home() {
         <div className="earn-strip">
           <div className="earn-strip-inner">
             <div>
-              <h3>🏺 Save together with Bitcoin-backed MUSD</h3>
+              <h3>🏦 The First Bitcoin-Native Checking Account</h3>
               <p>
-                Create a group savings pot, invite friends via encrypted XMTP messages, and lock MUSD toward a shared goal. Solo pots for personal targets, group pots for shared ones — all settled on-chain, no middleman, no bank.
+                Say goodbye to fragmented crypto wallets. MezoPay unifies your Bitcoin liquidity into a seamless, spendable balance. Split bills, pay rent, or fund group trips—all while your underlying assets stay secured by the Bitcoin network.
               </p>
             </div>
             <div className="earn-stat-row">
               <div>
-                <div className="es-v">Live</div>
-                <div className="es-l">On testnet now</div>
+                <div className="es-v">Instant</div>
+                <div className="es-l">Settlement time</div>
               </div>
               <div>
-                <div className="es-v">Solo + Group</div>
-                <div className="es-l">Pot types</div>
+                <div className="es-v">Zero Gas</div>
+                <div className="es-l">For the receiver</div>
               </div>
               <div>
-                <div className="es-v">XMTP invite</div>
-                <div className="es-l">Group coordination</div>
+                <div className="es-v">Native BTC</div>
+                <div className="es-l">Underlying security</div>
               </div>
               <div>
-                <div className="es-v">Time lock</div>
-                <div className="es-l">On-chain enforced</div>
+                <div className="es-v">Global</div>
+                <div className="es-l">Send anywhere, anytime</div>
               </div>
             </div>
           </div>
         </div>
 
+        <div className="tech-wrapper">
         <section className="tech" id="tech">
-          <div className="sec-lbl">Technical Stack</div>
+          <div className="sec-lbl">TECHNICAL STACK</div>
           <div className="sec-title">Built on Mezo primitives</div>
+          <div className="sec-sub">Every feature is backed by real on-chain contracts or official Mezo infrastructure — not simulated.</div>
           <div className="tech-grid">
-            <div className="tech-card large">
+            <div className="tech-card">
               <div>
                 <div className="tc-header">
                   <div className="tc-icon">🟠</div>
-                  <div className="tc-title">MUSD Testnet 0x118917…</div>
+                  <div className="tc-title">MUSD (Official Testnet)</div>
                 </div>
                 <div className="tc-desc">
-                  ERC-20 Bitcoin-backed stablecoin. Natively permit2 + EIP-2612. No approval tx needed. 18 decimals. Already deployed — just import the ABI.
+                  ERC-20 Bitcoin-backed stablecoin. Natively EIP-2612 + Permit2. No approval tx needed. 18 decimals. The primary currency for all MezoPay flows.
                 </div>
               </div>
-              <div className="tc-badge">Deployed Primitive</div>
+              <a href="https://explorer.test.mezo.org/address/0x118917a40FAF1CD7a13dB0Ef56C86De7973Ac503" target="_blank" rel="noreferrer" className="tc-badge">MUSD Contract ↗</a>
             </div>
 
-            <div className="tech-card medium">
+            <div className="tech-card">
               <div>
                 <div className="tc-header">
                   <div className="tc-icon">🔑</div>
-                  <div className="tc-title">Mezo Passport v0.1.0</div>
+                  <div className="tc-title">Mezo Passport v0.17.2</div>
                 </div>
                 <div className="tc-desc">
-                  Email/social authentication creates wallet silently. Zero seed phrase friction. Installs via @mezo-org/passport + RainbowKit + Wagmi.
+                  Email/social authentication creates wallet silently. Zero seed phrase friction. Installed via @mezo-org/passport + RainbowKit + Wagmi.
                 </div>
               </div>
-              <div className="tc-badge">Authentication</div>
+              <a href="https://www.npmjs.com/package/@mezo-org/passport" target="_blank" rel="noreferrer" className="tc-badge">Mezo Passport ↗</a>
             </div>
 
-            <div className="tech-card medium">
+            <div className="tech-card">
               <div>
                 <div className="tc-header">
                   <div className="tc-icon">📋</div>
                   <div className="tc-title">UsernameRegistry.sol</div>
                 </div>
                 <div className="tc-desc">
-                  Mapping of string username to on-chain address. Custom contract deploying on EVM london version for CometBFT compatibility.
+                  Custom on-chain handle registry. string → address and reverse lookup. Case-insensitive, 3-20 chars, deployed on Mezo testnet.
                 </div>
               </div>
-              <div className="tc-badge">Smart Contract (~0.5d)</div>
+              <a href="https://explorer.test.mezo.org/address/0x8eB4E69A550Dc63BaB674469eBC516d893793de8" target="_blank" rel="noreferrer" className="tc-badge">UsernameRegistry.sol ↗</a>
             </div>
 
-            <div className="tech-card large">
+            <div className="tech-card">
               <div>
                 <div className="tc-header">
                   <div className="tc-icon">⚖️</div>
                   <div className="tc-title">SplitManager.sol</div>
                 </div>
                 <div className="tc-desc">
-                  Tab manager storing split balances on-chain. Loops MUSD.transferFrom inside a single transaction to batch-settle all members. Fully tested with Foundry.
+                  Tab manager that batch-settles MUSD.transferFrom in a single transaction across all members. EIP-2612 permit path for gasless settlement.
                 </div>
               </div>
-              <div className="tc-badge">Smart Contract (~1.0d)</div>
+              <a href="https://explorer.test.mezo.org/address/0x9cd6D4A92939A1b93fBb3c848c2cF3e9f09D4C10" target="_blank" rel="noreferrer" className="tc-badge">SplitManager.sol ↗</a>
             </div>
 
-            <div className="tech-card medium">
-              <div>
-                <div className="tc-header">
-                  <div className="tc-icon">📊</div>
-                  <div className="tc-title">Goldsky Subgraph</div>
-                </div>
-                <div className="tc-desc">
-                  Real-time indexer monitoring MUSD Transfer events on Chain 31611. Powers balance history and activity feeds with a clean GraphQL API.
-                </div>
-              </div>
-              <div className="tc-badge">Data Indexing (~0.5d)</div>
-            </div>
-
-            <div className="tech-card large">
+            <div className="tech-card">
               <div>
                 <div className="tc-header">
                   <div className="tc-icon">🏺</div>
                   <div className="tc-title">SavingsPot.sol</div>
                 </div>
                 <div className="tc-desc">
-                  On-chain time-locked savings goals. Solo pots for personal targets, group pots with XMTP invites for shared ones.
+                  On-chain time-locked savings goals. Solo pots for personal targets, group pots with XMTP invites. Strict unlock time enforced on-chain.
                 </div>
               </div>
-              <div className="tc-badge">Smart Contract (~1.0d)</div>
+              <a href="https://explorer.test.mezo.org/address/0x72290EB00a06c4a5582c64e8E336F6e4D242bE87" target="_blank" rel="noreferrer" className="tc-badge">SavingsPot.sol ↗</a>
             </div>
-          </div>
-          <div className="tech-note">
-            <strong>✅ Testnet Build:</strong> All MVP features demo on Chain 31611 · RPC: rpc.test.mezo.org · Faucet: faucet.test.mezo.org · Explorer: explorer.test.mezo.org · Mainnet Chain 31612 for Phase 2.
+
+            <div className="tech-card">
+              <div>
+                <div className="tc-header">
+                  <div className="tc-icon">📊</div>
+                  <div className="tc-title">Goldsky Subgraph</div>
+                </div>
+                <div className="tc-desc">
+                  Real-time indexer monitoring MUSD Transfer events, tab creations, pot deposits on Chain 31611. Powers live activity feeds with GraphQL.
+                </div>
+              </div>
+              <a href="https://api.goldsky.com" target="_blank" rel="noreferrer" className="tc-badge">Goldsky Subgraph ↗</a>
+            </div>
           </div>
         </section>
 
         <div className="cta-banner">
           <div>
-            <h2>The Venmo moment for Bitcoin finance.</h2>
+            <h2>The Venmo<br />moment<br />for Bitcoin.</h2>
             <p>
-              80 million people just want to split dinner. MezoPay makes Bitcoin-backed MUSD as easy as typing @friend. No addresses. No gas warnings. Just money.
+              80 million Bitcoin holders want to split dinner, pay rent, and save for a trip. MezoPay makes Bitcoin-backed MUSD as easy as typing @friend. No addresses. No gas warnings. Just money.
             </p>
           </div>
-          <ConnectButton.Custom>
-            {({ openConnectModal, account, mounted }) => {
-              const ready = mounted;
-              const connected = ready && account;
-              return (
-                <button
-                  onClick={connected ? () => router.push("/app/dashboard") : openConnectModal}
-                  className="cta-white"
-                >
-                  {connected ? "Enter App →" : "Connect Wallet →"}
-                </button>
-              );
-            }}
-          </ConnectButton.Custom>
+          <div className="cta-btns">
+            <ConnectButton.Custom>
+              {({ openConnectModal, account, mounted }) => {
+                const ready = mounted;
+                const connected = ready && account;
+                return (
+                  <button
+                    onClick={connected ? () => router.push("/app/dashboard") : openConnectModal}
+                    className="cta-orange"
+                  >
+                    {connected ? "Enter App →" : "🟠 Claim @username"}
+                  </button>
+                );
+              }}
+            </ConnectButton.Custom>
+            <a href="https://mezo.org/docs" target="_blank" rel="noreferrer" className="cta-white">
+              Read Mezo Docs →
+            </a>
+          </div>
         </div>
-
         <footer className="landing-footer">
           <div className="footer-logo">MezoPay.</div>
           <div className="footer-links">
@@ -1307,7 +1539,7 @@ export default function Home() {
             <a href="https://explorer.test.mezo.org" target="_blank" rel="noreferrer">Explorer</a>
           </div>
           <div className="footer-note">Built on Mezo · MUSD Track · Supernormal dApps</div>
-        </footer>
+        </footer></div>
       </div>
     </>
   );
