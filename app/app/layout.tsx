@@ -88,20 +88,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     setRefetchGoldskyCount((prev) => prev + 1);
   };
 
-  // Yield earned state & calculations
-  const [yieldEarned, setYieldEarned] = useState(0.00);
-
-  useEffect(() => {
-    if (!balance) return;
-    const balanceNum = Number(balance) / 1e18;
-    const interestPerSec = balanceNum * (0.024 / (365 * 24 * 60 * 60)); // 2.4% APR
-    
-    const interval = setInterval(() => {
-      setYieldEarned((prev) => prev + interestPerSec);
-    }, 1000);
-    
-    return () => clearInterval(interval);
-  }, [balance]);
 
   // Compute dynamic split stats from active tabs state
   const owedAmount = tabs

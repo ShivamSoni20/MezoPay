@@ -25,7 +25,7 @@
 
 **MezoPay** is a consumer payments app built for the **Supernormal dApps — MUSD Track** at the Mezo hackathon. It turns Bitcoin-backed **MUSD** into something people actually use: pay a friend, request dinner money, or split a group tab — all with `@username`, not hex addresses.
 
-Mezo lets Bitcoin holders mint MUSD against BTC collateral at transparent, onchain terms. MezoPay sits on top as the consumer banking layer: send to @username, split group bills, and save toward goals — all in MUSD, all on Bitcoin rails.
+Users can seamlessly obtain MUSD—Mezo's native Bitcoin-backed stablecoin—directly on the Mezo portal. MezoPay then sits on top as the consumer banking layer: send to @username, split group bills, and save toward goals — all in MUSD, all on Bitcoin rails.
 
 > **Hackathon focus:** Self-service banking on Bitcoin rails — MUSD as the primary medium of exchange for real-world payment flows (P2P send, requests, splits, merchant-ready primitives).
 

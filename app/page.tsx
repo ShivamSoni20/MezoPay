@@ -350,6 +350,7 @@ export default function Home() {
         .hero-visual {
           display: flex;
           justify-content: center;
+          align-items: center;
           position: relative;
         }
 
@@ -1146,14 +1147,14 @@ export default function Home() {
         <section className="hero">
           <div>
             <div className="hero-badge">
-              <span className="pulse"></span>Supernormal dApps · Self-service Bitcoin banking
+              <span className="pulse"></span>Supernormal dApps · MUSD Track
             </div>
             <h1 className="landing-h1">
-              Your Bitcoin bank.<br /><span className="accent">No bank required.</span>
+              Bitcoin as normal<br /><span className="accent">as your phone.</span>
             </h1>
             <p className="hero-desc" style={{ maxWidth: "540px" }}>
-              Send MUSD to @username. Split dinner with friends. Save toward group goals — all with Bitcoin-backed money, no addresses, no gas warnings, no bank account.<br />
-              <strong>MezoPay is self-service banking on Bitcoin rails: payments, splits, and savings in one app.</strong>
+              Send MUSD to @friends. Split dinner bills. Save toward group goals — all with Bitcoin-backed money. No 0x addresses, no gas warnings, no bank account required.<br /><br />
+              <strong>MezoPay is consumer finance on Bitcoin rails.</strong>
             </p>
             <div className="hero-ctas" style={{ marginBottom: "12px" }}>
               <ConnectButton.Custom>

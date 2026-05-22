@@ -20,7 +20,6 @@ export default function DashboardPage() {
     tabs,
     showToast,
     refetchData,
-    yieldEarned,
     owedAmount,
     oweAmount,
     xmtpStatus,
