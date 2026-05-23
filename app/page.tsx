@@ -26,7 +26,7 @@ export default function Home() {
         setSendTo("");
         setSendAmount("");
         setShowNewTx(false);
-        
+
         await new Promise(r => setTimeout(r, 800));
         if (isCancelled) break;
 
@@ -36,7 +36,7 @@ export default function Home() {
           setSendTo(targetUser.slice(0, i));
           await new Promise(r => setTimeout(r, 100));
         }
-        
+
         await new Promise(r => setTimeout(r, 400));
         if (isCancelled) break;
 
@@ -46,21 +46,21 @@ export default function Home() {
           setSendAmount(targetAmt.slice(0, i));
           await new Promise(r => setTimeout(r, 150));
         }
-        
+
         await new Promise(r => setTimeout(r, 800));
         if (isCancelled) break;
 
         setIsSending(true);
         await new Promise(r => setTimeout(r, 1200));
         if (isCancelled) break;
-        
+
         setIsSending(false);
         setPhoneScreen("success");
         setShowNewTx(true);
-        
+
         await new Promise(r => setTimeout(r, 2500));
         if (isCancelled) break;
-        
+
         setPhoneScreen("home");
         await new Promise(r => setTimeout(r, 3500));
       }
@@ -78,7 +78,8 @@ export default function Home() {
 
   return (
     <>
-      <style dangerouslySetInnerHTML={{ __html: `
+      <style dangerouslySetInnerHTML={{
+        __html: `
         :root {
           --orange: #F97316;
           --orange-light: #FFF7ED;
@@ -198,7 +199,7 @@ export default function Home() {
           display: grid;
           grid-template-columns: 1fr 1fr;
           gap: 56px;
-          align-items: center;
+          align-items: start;
         }
 
         .hero-badge {
@@ -212,7 +213,7 @@ export default function Home() {
           padding: 6px 14px;
           font-size: 0.77rem;
           font-weight: 700;
-          margin-bottom: 20px;
+          margin-bottom: 12px;
         }
 
         .pulse {
@@ -230,10 +231,10 @@ export default function Home() {
 
         .landing-h1 {
           font-family: 'Syne', sans-serif;
-          font-size: clamp(2.5rem, 4.8vw, 3.9rem);
+          font-size: clamp(2.2rem, 3.8vw, 3.3rem);
           font-weight: 800;
           line-height: 1.07;
-          margin-bottom: 18px;
+          margin-bottom: 8px;
           color: var(--dark);
         }
 
@@ -242,11 +243,11 @@ export default function Home() {
         }
 
         .hero-desc {
-          font-size: 1.03rem;
+          font-size: 0.95rem;
           color: var(--gray);
           line-height: 1.72;
           max-width: 478px;
-          margin-bottom: 30px;
+          margin-bottom: 16px;
         }
 
         .hero-ctas {
@@ -254,7 +255,7 @@ export default function Home() {
           gap: 12px;
           align-items: center;
           flex-wrap: wrap;
-          margin-bottom: 32px;
+          margin-bottom: 16px;
         }
 
         .btn-primary {
@@ -298,7 +299,7 @@ export default function Home() {
           display: flex;
           gap: 7px;
           flex-wrap: wrap;
-          margin-bottom: 30px;
+          margin-bottom: 16px;
         }
 
         .badge {
@@ -329,22 +330,24 @@ export default function Home() {
 
         .hero-stats {
           display: flex;
-          gap: 26px;
-          padding-top: 26px;
+          gap: 14px;
+          padding-top: 16px;
           border-top: 1px solid var(--border);
-          flex-wrap: wrap;
+          flex-wrap: nowrap;
+          justify-content: space-between;
         }
 
         .stat-num {
           font-family: 'Syne', sans-serif;
-          font-size: 1.45rem;
+          font-size: 1.25rem;
           font-weight: 800;
         }
 
         .stat-lbl {
-          font-size: 0.73rem;
+          font-size: 0.68rem;
           color: var(--gray);
           margin-top: 2px;
+          white-space: nowrap;
         }
 
         .hero-visual {
@@ -352,6 +355,7 @@ export default function Home() {
           justify-content: center;
           align-items: center;
           position: relative;
+          margin-top: -35px;
         }
 
         .phone-shell {
@@ -1114,6 +1118,65 @@ export default function Home() {
           .landing-body { padding-top: 56px; }
           .nav-cta { padding: 8px 14px; font-size: 0.8rem; }
         }
+        
+        @media (max-width: 900px) {
+          .hero {
+            grid-template-columns: 1fr;
+            text-align: center;
+            gap: 40px;
+          }
+          .hero > div:first-child {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+          }
+          .hero-ctas, .badge-row {
+            justify-content: center;
+          }
+          .hero-stats {
+            justify-content: center;
+            flex-wrap: wrap !important;
+            gap: 20px;
+          }
+          .stat-lbl {
+            white-space: normal !important;
+          }
+          .landing-h1 {
+            font-size: clamp(2rem, 8vw, 2.5rem);
+          }
+          .hero-desc {
+            margin: 0 auto 16px auto;
+          }
+          .nav-links {
+            display: none;
+          }
+          .tech-grid, .features-grid, .how-grid, .earn-strip-inner {
+            grid-template-columns: 1fr;
+            text-align: center;
+          }
+          .earn-stat-row {
+            flex-wrap: wrap;
+            justify-content: center;
+          }
+          .footer-links {
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+          }
+          .cta-btns {
+            flex-direction: column;
+            align-items: stretch;
+            gap: 12px;
+            width: 100%;
+            max-width: 300px;
+            margin: 0 auto;
+          }
+          .cta-btns button, .cta-btns a {
+            width: 100%;
+            text-align: center;
+            justify-content: center;
+          }
+        }
       `}} />
 
       <div className="landing-body">
@@ -1147,14 +1210,13 @@ export default function Home() {
         <section className="hero">
           <div>
             <div className="hero-badge">
-              <span className="pulse"></span>Supernormal dApps · MUSD Track
+              <span className="pulse"></span>MezoPay is Live • Bitcoin-backed MUSD payments are here
             </div>
             <h1 className="landing-h1">
               Bitcoin as normal<br /><span className="accent">as your phone.</span>
             </h1>
-            <p className="hero-desc" style={{ maxWidth: "540px" }}>
-              Send MUSD to @friends. Split dinner bills. Save toward group goals — all with Bitcoin-backed money. No 0x addresses, no gas warnings, no bank account required.<br /><br />
-              <strong>MezoPay is consumer finance on Bitcoin rails.</strong>
+            <p className="hero-desc" style={{ maxWidth: "620px" }}>
+              The Venmo moment for Bitcoin. Pay @friends, split group tabs, and save in MUSD instantly. Zero gas fees, zero hex addresses. <strong style={{ whiteSpace: "nowrap" }}>True consumer banking on Bitcoin L2.</strong>
             </p>
             <div className="hero-ctas" style={{ marginBottom: "12px" }}>
               <ConnectButton.Custom>
@@ -1173,14 +1235,11 @@ export default function Home() {
               </ConnectButton.Custom>
               <a href="#how" className="btn-sec">Watch 45-sec Demo</a>
             </div>
-            <div style={{ fontSize: "0.76rem", color: "var(--gray)", marginBottom: "24px", display: "flex", alignItems: "center", gap: "6px" }}>
-              <span className="net-dot" style={{ background: "var(--green)", width: "6px", height: "6px", borderRadius: "50%" }}></span> Built on Mezo • Testnet Live
-            </div>
+
             <div className="badge-row">
               <span className="badge">⚡ EIP-712 Gasless</span>
               <span className="badge">🔒 Mezo Passport</span>
               <span className="badge">📊 Goldsky Feed</span>
-              <span className="badge">📈 Mezo Earn</span>
               <span className="badge">🏺 Savings Pots</span>
               <span className="net-pill">🌐 Chain 31611 Testnet</span>
             </div>
@@ -1218,7 +1277,7 @@ export default function Home() {
                   <div className="p-app-name">MezoPay<span>.</span></div>
                   <div className="p-avatar">AJ</div>
                 </div>
-                
+
                 {phoneScreen === "home" && (
                   <>
                     <div className="p-balance-card">
@@ -1244,7 +1303,7 @@ export default function Home() {
                     <div className="p-tx-list" id="txList" style={{ overflowY: 'auto' }}>
                       {showNewTx && (
                         <div className="p-tx">
-                          <div className="p-tx-av" style={{background: '#EAB308'}}>S</div>
+                          <div className="p-tx-av" style={{ background: '#EAB308' }}>S</div>
                           <div className="p-tx-info">
                             <div className="p-tx-name">@satoshi</div>
                             <div className="p-tx-note">Sent MUSD</div>
@@ -1253,7 +1312,7 @@ export default function Home() {
                         </div>
                       )}
                       <div className="p-tx">
-                        <div className="p-tx-av" style={{background: '#F97316'}}>A</div>
+                        <div className="p-tx-av" style={{ background: '#F97316' }}>A</div>
                         <div className="p-tx-info">
                           <div className="p-tx-name">@alex</div>
                           <div className="p-tx-note">🍕 Pizza night</div>
@@ -1261,7 +1320,7 @@ export default function Home() {
                         <div className="p-tx-amt pos">+$30.00</div>
                       </div>
                       <div className="p-tx">
-                        <div className="p-tx-av" style={{background: '#8B5CF6'}}>S</div>
+                        <div className="p-tx-av" style={{ background: '#8B5CF6' }}>S</div>
                         <div className="p-tx-info">
                           <div className="p-tx-name">@sarah</div>
                           <div className="p-tx-note">🎬 Movie tickets</div>
@@ -1269,7 +1328,7 @@ export default function Home() {
                         <div className="p-tx-amt neg">-$15.00</div>
                       </div>
                       <div className="p-tx">
-                        <div className="p-tx-av" style={{background: '#06B6D4'}}>M</div>
+                        <div className="p-tx-av" style={{ background: '#06B6D4' }}>M</div>
                         <div className="p-tx-info">
                           <div className="p-tx-name">@mike</div>
                           <div className="p-tx-note">☕ Coffee</div>
@@ -1312,7 +1371,7 @@ export default function Home() {
             <div className="step-card">
               <div className="step-num">01</div>
               <h3>Connect & Claim @handle</h3>
-              <p>One-click RainbowKit login. Register your @username on-chain via UsernameRegistry.sol — instant, permanent.</p>
+              <p>Connect your wallet seamlessly via RainbowKit and <strong>Mezo Passport</strong>. Register your @username on-chain via UsernameRegistry.sol — instant, permanent.</p>
             </div>
             <div className="step-card">
               <div className="step-num">02</div>
@@ -1339,17 +1398,17 @@ export default function Home() {
             <div className="features-grid">
               <div className="feature-card">
                 <div className="f-icon">🔐</div>
-                <h3>Mezo Passport Identity</h3>
+                <h3>Mezo Passport Integration</h3>
                 <p>
-                  No seed phrases. No 0x addresses. Users sign up with just an email or social account. Our on-chain Username Registry maps handles like @satoshi instantly, making onboarding as frictionless as Web2.
+                  Powered by the official @mezo-org/passport SDK. We wrap our Wagmi and RainbowKit configuration with the Passport provider, enabling a seamless and native connection to the Mezo testnet.
                 </p>
                 <span className="f-pill">✓ MVP · Testnet ready</span>
               </div>
               <div className="feature-card">
-                <div className="f-icon">⚡</div>
-                <h3>Free, Instant MUSD Transfers</h3>
+                <div className="f-icon">💸</div>
+                <h3>Username-Based MUSD Transfers</h3>
                 <p>
-                  Bitcoin should be as normal as using your phone. Through background EIP-2612 magic, users send MUSD instantly without ever holding native tokens for gas or signing approval transactions.
+                  Send MUSD to friends using just their @handle. No more copying complex 0x addresses. Fast, secure, and direct on-chain settlement on the Mezo network.
                 </p>
                 <span className="f-pill">✓ MVP · Testnet ready</span>
               </div>
@@ -1363,9 +1422,9 @@ export default function Home() {
               </div>
               <div className="feature-card">
                 <div className="f-icon">📡</div>
-                <h3>Venmo-Style Social Feed</h3>
+                <h3>Real-time Activity Feed</h3>
                 <p>
-                  Money is social. Powered by a real-time Goldsky subgraph, MezoPay features a live activity feed so you can see when friends settle tabs or reach their savings goals.
+                  Money is social. Powered by a custom Goldsky subgraph, MezoPay features a fast activity feed so you can track your history and see when you or your friends interact with the protocol.
                 </p>
                 <span className="f-pill">✓ MVP · Testnet ready</span>
               </div>
@@ -1392,23 +1451,23 @@ export default function Home() {
         <div className="earn-strip">
           <div className="earn-strip-inner">
             <div>
-              <h3>🏦 The First Bitcoin-Native Checking Account</h3>
+              <h3>🏦 The Ultimate Venmo for Bitcoin L2</h3>
               <p>
-                Say goodbye to fragmented crypto wallets. MezoPay unifies your Bitcoin liquidity into a seamless, spendable balance. Split bills, pay rent, or fund group trips—all while your underlying assets stay secured by the Bitcoin network.
+                Say goodbye to clunky crypto UX. MezoPay transforms your MUSD into a seamless, everyday balance. Pay friends instantly via @usernames, split group bills, or lock funds in savings pots—all settling securely on the Mezo testnet.
               </p>
             </div>
             <div className="earn-stat-row">
               <div>
-                <div className="es-v">Instant</div>
+                <div className="es-v">Fast</div>
                 <div className="es-l">Settlement time</div>
               </div>
               <div>
-                <div className="es-v">Zero Gas</div>
+                <div className="es-v">$0 Gas</div>
                 <div className="es-l">For the receiver</div>
               </div>
               <div>
-                <div className="es-v">Native BTC</div>
-                <div className="es-l">Underlying security</div>
+                <div className="es-v">MUSD</div>
+                <div className="es-l">Powered by Bitcoin L2</div>
               </div>
               <div>
                 <div className="es-v">Global</div>
@@ -1419,128 +1478,128 @@ export default function Home() {
         </div>
 
         <div className="tech-wrapper">
-        <section className="tech" id="tech">
-          <div className="sec-lbl">TECHNICAL STACK</div>
-          <div className="sec-title">Built on Mezo primitives</div>
-          <div className="sec-sub">Every feature is backed by real on-chain contracts or official Mezo infrastructure — not simulated.</div>
-          <div className="tech-grid">
-            <div className="tech-card">
-              <div>
-                <div className="tc-header">
-                  <div className="tc-icon">🟠</div>
-                  <div className="tc-title">MUSD (Official Testnet)</div>
+          <section className="tech" id="tech">
+            <div className="sec-lbl">TECHNICAL STACK</div>
+            <div className="sec-title">Built on Mezo primitives</div>
+            <div className="sec-sub">Every feature is backed by real on-chain contracts or official Mezo infrastructure — not simulated.</div>
+            <div className="tech-grid">
+              <div className="tech-card">
+                <div>
+                  <div className="tc-header">
+                    <div className="tc-icon">🟠</div>
+                    <div className="tc-title">MUSD (Official Testnet)</div>
+                  </div>
+                  <div className="tc-desc">
+                    ERC-20 Bitcoin-backed stablecoin. Natively EIP-2612 + Permit2. No approval tx needed. 18 decimals. The primary currency for all MezoPay flows.
+                  </div>
                 </div>
-                <div className="tc-desc">
-                  ERC-20 Bitcoin-backed stablecoin. Natively EIP-2612 + Permit2. No approval tx needed. 18 decimals. The primary currency for all MezoPay flows.
-                </div>
+                <a href="https://explorer.test.mezo.org/address/0x118917a40FAF1CD7a13dB0Ef56C86De7973Ac503" target="_blank" rel="noreferrer" className="tc-badge">MUSD Contract ↗</a>
               </div>
-              <a href="https://explorer.test.mezo.org/address/0x118917a40FAF1CD7a13dB0Ef56C86De7973Ac503" target="_blank" rel="noreferrer" className="tc-badge">MUSD Contract ↗</a>
-            </div>
 
-            <div className="tech-card">
-              <div>
-                <div className="tc-header">
-                  <div className="tc-icon">🔑</div>
-                  <div className="tc-title">Mezo Passport v0.17.2</div>
+              <div className="tech-card">
+                <div>
+                  <div className="tc-header">
+                    <div className="tc-icon">🔑</div>
+                    <div className="tc-title">Mezo Passport Integration</div>
+                  </div>
+                  <div className="tc-desc">
+                    Seamless Web3 wallet connection powered by @mezo-org/passport and RainbowKit. Users connect their preferred wallet, which our Username Registry instantly maps to a human-readable @handle.
+                  </div>
                 </div>
-                <div className="tc-desc">
-                  Email/social authentication creates wallet silently. Zero seed phrase friction. Installed via @mezo-org/passport + RainbowKit + Wagmi.
-                </div>
+                <a href="https://www.npmjs.com/package/@mezo-org/passport" target="_blank" rel="noreferrer" className="tc-badge">Mezo Passport ↗</a>
               </div>
-              <a href="https://www.npmjs.com/package/@mezo-org/passport" target="_blank" rel="noreferrer" className="tc-badge">Mezo Passport ↗</a>
-            </div>
 
-            <div className="tech-card">
-              <div>
-                <div className="tc-header">
-                  <div className="tc-icon">📋</div>
-                  <div className="tc-title">UsernameRegistry.sol</div>
+              <div className="tech-card">
+                <div>
+                  <div className="tc-header">
+                    <div className="tc-icon">📋</div>
+                    <div className="tc-title">UsernameRegistry.sol</div>
+                  </div>
+                  <div className="tc-desc">
+                    Custom on-chain handle registry. string → address and reverse lookup. Case-insensitive, 3-20 chars, deployed on Mezo testnet.
+                  </div>
                 </div>
-                <div className="tc-desc">
-                  Custom on-chain handle registry. string → address and reverse lookup. Case-insensitive, 3-20 chars, deployed on Mezo testnet.
-                </div>
+                <a href="https://explorer.test.mezo.org/address/0x8eB4E69A550Dc63BaB674469eBC516d893793de8" target="_blank" rel="noreferrer" className="tc-badge">UsernameRegistry.sol ↗</a>
               </div>
-              <a href="https://explorer.test.mezo.org/address/0x8eB4E69A550Dc63BaB674469eBC516d893793de8" target="_blank" rel="noreferrer" className="tc-badge">UsernameRegistry.sol ↗</a>
-            </div>
 
-            <div className="tech-card">
-              <div>
-                <div className="tc-header">
-                  <div className="tc-icon">⚖️</div>
-                  <div className="tc-title">SplitManager.sol</div>
+              <div className="tech-card">
+                <div>
+                  <div className="tc-header">
+                    <div className="tc-icon">⚖️</div>
+                    <div className="tc-title">SplitManager.sol</div>
+                  </div>
+                  <div className="tc-desc">
+                    Tab manager that batch-settles MUSD.transferFrom in a single transaction across all members. EIP-2612 permit path for gasless settlement.
+                  </div>
                 </div>
-                <div className="tc-desc">
-                  Tab manager that batch-settles MUSD.transferFrom in a single transaction across all members. EIP-2612 permit path for gasless settlement.
-                </div>
+                <a href="https://explorer.test.mezo.org/address/0x9cd6D4A92939A1b93fBb3c848c2cF3e9f09D4C10" target="_blank" rel="noreferrer" className="tc-badge">SplitManager.sol ↗</a>
               </div>
-              <a href="https://explorer.test.mezo.org/address/0x9cd6D4A92939A1b93fBb3c848c2cF3e9f09D4C10" target="_blank" rel="noreferrer" className="tc-badge">SplitManager.sol ↗</a>
-            </div>
 
-            <div className="tech-card">
-              <div>
-                <div className="tc-header">
-                  <div className="tc-icon">🏺</div>
-                  <div className="tc-title">SavingsPot.sol</div>
+              <div className="tech-card">
+                <div>
+                  <div className="tc-header">
+                    <div className="tc-icon">🏺</div>
+                    <div className="tc-title">SavingsPot.sol</div>
+                  </div>
+                  <div className="tc-desc">
+                    On-chain time-locked savings goals. Solo pots for personal targets, group pots with XMTP invites. Strict unlock time enforced on-chain.
+                  </div>
                 </div>
-                <div className="tc-desc">
-                  On-chain time-locked savings goals. Solo pots for personal targets, group pots with XMTP invites. Strict unlock time enforced on-chain.
-                </div>
+                <a href="https://explorer.test.mezo.org/address/0x72290EB00a06c4a5582c64e8E336F6e4D242bE87" target="_blank" rel="noreferrer" className="tc-badge">SavingsPot.sol ↗</a>
               </div>
-              <a href="https://explorer.test.mezo.org/address/0x72290EB00a06c4a5582c64e8E336F6e4D242bE87" target="_blank" rel="noreferrer" className="tc-badge">SavingsPot.sol ↗</a>
-            </div>
 
-            <div className="tech-card">
-              <div>
-                <div className="tc-header">
-                  <div className="tc-icon">📊</div>
-                  <div className="tc-title">Goldsky Subgraph</div>
+              <div className="tech-card">
+                <div>
+                  <div className="tc-header">
+                    <div className="tc-icon">📊</div>
+                    <div className="tc-title">Goldsky Subgraph</div>
+                  </div>
+                  <div className="tc-desc">
+                    Real-time indexer monitoring MUSD Transfer events, tab creations, pot deposits on Chain 31611. Powers live activity feeds with GraphQL.
+                  </div>
                 </div>
-                <div className="tc-desc">
-                  Real-time indexer monitoring MUSD Transfer events, tab creations, pot deposits on Chain 31611. Powers live activity feeds with GraphQL.
-                </div>
+                <a href="https://api.goldsky.com" target="_blank" rel="noreferrer" className="tc-badge">Goldsky Subgraph ↗</a>
               </div>
-              <a href="https://api.goldsky.com" target="_blank" rel="noreferrer" className="tc-badge">Goldsky Subgraph ↗</a>
+            </div>
+          </section>
+
+          <div className="cta-banner">
+            <div>
+              <h2>The Venmo<br />moment<br />for Bitcoin.</h2>
+              <p>
+                80 million Bitcoin holders want to split dinner, pay rent, and save for a trip. MezoPay makes Bitcoin-backed MUSD as easy as typing @friend. No addresses. No gas warnings. Just money.
+              </p>
+            </div>
+            <div className="cta-btns">
+              <ConnectButton.Custom>
+                {({ openConnectModal, account, mounted }) => {
+                  const ready = mounted;
+                  const connected = ready && account;
+                  return (
+                    <button
+                      onClick={connected ? () => router.push("/app/dashboard") : openConnectModal}
+                      className="cta-orange"
+                    >
+                      {connected ? "Enter App →" : "🟠 Claim @username"}
+                    </button>
+                  );
+                }}
+              </ConnectButton.Custom>
+              <a href="https://mezo.org/docs" target="_blank" rel="noreferrer" className="cta-white">
+                Read Mezo Docs →
+              </a>
             </div>
           </div>
-        </section>
-
-        <div className="cta-banner">
-          <div>
-            <h2>The Venmo<br />moment<br />for Bitcoin.</h2>
-            <p>
-              80 million Bitcoin holders want to split dinner, pay rent, and save for a trip. MezoPay makes Bitcoin-backed MUSD as easy as typing @friend. No addresses. No gas warnings. Just money.
-            </p>
-          </div>
-          <div className="cta-btns">
-            <ConnectButton.Custom>
-              {({ openConnectModal, account, mounted }) => {
-                const ready = mounted;
-                const connected = ready && account;
-                return (
-                  <button
-                    onClick={connected ? () => router.push("/app/dashboard") : openConnectModal}
-                    className="cta-orange"
-                  >
-                    {connected ? "Enter App →" : "🟠 Claim @username"}
-                  </button>
-                );
-              }}
-            </ConnectButton.Custom>
-            <a href="https://mezo.org/docs" target="_blank" rel="noreferrer" className="cta-white">
-              Read Mezo Docs →
-            </a>
-          </div>
-        </div>
-        <footer className="landing-footer">
-          <div className="footer-logo">MezoPay.</div>
-          <div className="footer-links">
-            <a href="https://x.com/GetMezoPay" target="_blank" rel="noreferrer">X</a>
-            <a href="https://mezo.org/docs/developers/" target="_blank" rel="noreferrer">Mezo Docs</a>
-            <a href="https://github.com/mezo-org" target="_blank" rel="noreferrer">GitHub</a>
-            <a href="https://explorer.test.mezo.org" target="_blank" rel="noreferrer">Explorer</a>
-          </div>
-          <div className="footer-note">Built on Mezo · MUSD Track · Supernormal dApps</div>
-        </footer></div>
+          <footer className="landing-footer">
+            <div className="footer-logo">MezoPay.</div>
+            <div className="footer-links">
+              <a href="https://x.com/GetMezoPay" target="_blank" rel="noreferrer">X</a>
+              <a href="https://mezo.org/docs/developers/" target="_blank" rel="noreferrer">Mezo Docs</a>
+              <a href="https://github.com/NikhilRaikwar/MezoPay" target="_blank" rel="noreferrer">GitHub</a>
+              <a href="https://explorer.test.mezo.org" target="_blank" rel="noreferrer">Explorer</a>
+            </div>
+            <div className="footer-note">Built on Mezo · MUSD Track · Supernormal dApps</div>
+          </footer></div>
       </div>
     </>
   );

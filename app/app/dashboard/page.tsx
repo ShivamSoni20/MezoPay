@@ -105,24 +105,25 @@ export default function DashboardPage() {
     try {
       // Resolve address (needed for send and request)
       let resolvedAddress: `0x${string}` = "0x0000000000000000000000000000000000000000";
-      const isDirectAddress = toHandle.startsWith("0x") && toHandle.length === 42;
 
-      if (isDirectAddress) {
-        resolvedAddress = toHandle as `0x${string}`;
-      } else {
-        showToast(`Resolving @${cleanHandle}...`);
-        if (publicClient) {
-          try {
-            const result = await publicClient.readContract({
-              address: CONTRACTS.USERNAME_REGISTRY,
-              abi: parseAbi(REGISTRY_ABI),
-              functionName: "resolve",
-              args: [cleanHandle],
-            });
-            resolvedAddress = result as `0x${string}`;
-          } catch (err) {
-            console.error("Registry lookup failed", err);
-          }
+      if (toHandle.startsWith("0x")) {
+        showToast("Error: Direct 0x addresses are not supported. Use an @username instead.");
+        setIsLoading(false);
+        return;
+      }
+
+      showToast(`Resolving @${cleanHandle}...`);
+      if (publicClient) {
+        try {
+          const result = await publicClient.readContract({
+            address: CONTRACTS.USERNAME_REGISTRY,
+            abi: parseAbi(REGISTRY_ABI),
+            functionName: "resolve",
+            args: [cleanHandle],
+          });
+          resolvedAddress = result as `0x${string}`;
+        } catch (err) {
+          console.error("Registry lookup failed", err);
         }
       }
 
@@ -148,7 +149,7 @@ export default function DashboardPage() {
           {
             id: `tx-${Date.now()}`,
             type: "sent",
-            title: isDirectAddress ? `Sent to ${resolvedAddress.slice(0, 6)}...${resolvedAddress.slice(-4)}` : `Sent to @${cleanHandle}`,
+            title: `Sent to @${cleanHandle}`,
             detail: note || "Quick Payment",
             amount: -parseFloat(amount),
             date: "Just now",
@@ -169,7 +170,7 @@ export default function DashboardPage() {
           fromAddress: (address || "0x0000000000000000000000000000000000000000").toLowerCase(),
           fromUsername: username || "",
           toAddress: resolvedAddress.toLowerCase(),
-          toUsername: isDirectAddress ? "" : cleanHandle,
+          toUsername: cleanHandle,
           amount: parseFloat(amount),
           note: note || "Quick Request",
           timestamp: Math.floor(Date.now() / 1000),
@@ -189,16 +190,14 @@ export default function DashboardPage() {
             if (reachable) {
               delivered = await sendPaymentRequest(
                 resolvedAddress,
-                isDirectAddress ? "" : cleanHandle,
+                cleanHandle,
                 newRequest.amount,
                 newRequest.note,
                 reqId,
               );
             } else {
               showToast(
-                isDirectAddress
-                  ? "Recipient not on XMTP — request saved locally"
-                  : `@${cleanHandle} is not on XMTP — request saved locally`,
+                `@${cleanHandle} is not on XMTP — request saved locally`,
               );
             }
           } catch (err) {
@@ -208,7 +207,7 @@ export default function DashboardPage() {
 
         if (delivered) {
           showToast(
-            `Request for $${amount} sent via XMTP to ${isDirectAddress ? "wallet" : `@${cleanHandle}`}!`,
+            `Request for $${amount} sent via XMTP to @${cleanHandle}!`,
             `$${amount}`,
           );
         } else if (!xmtpReady) {

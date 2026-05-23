@@ -19,6 +19,9 @@ export const metadata: Metadata = {
   metadataBase: new URL("https://mezopay.nikhilraikwar.me"),
   title: "MezoPay - Gasless Venmo-style Payments & Group Bills on Mezo",
   description: "The ultimate decentralized Venmo on Mezo. Register case-insensitive @handles, send gasless MUSD via permit2, and split group tabs in a single transaction.",
+  icons: {
+    icon: "/favicon.png",
+  },
   keywords: [
     "Mezo",
     "MUSD",
@@ -52,9 +55,6 @@ export const metadata: Metadata = {
     title: "MezoPay - Gasless Venmo-style Payments & Group Bills on Mezo",
     description: "Decentralized Venmo on Mezo. Register case-insensitive @handles, send gasless MUSD via permit2, and split group tabs in a single transaction.",
     images: ["/banner.png"],
-  },
-  icons: {
-    icon: "/favicon.png",
   },
 };
 
