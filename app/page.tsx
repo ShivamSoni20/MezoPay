@@ -355,7 +355,7 @@ export default function Home() {
           justify-content: center;
           align-items: center;
           position: relative;
-          margin-top: -35px;
+          margin-top: -60px;
         }
 
         .phone-shell {
@@ -1210,13 +1210,14 @@ export default function Home() {
         <section className="hero">
           <div>
             <div className="hero-badge">
-              <span className="pulse"></span>MezoPay is Live • Bitcoin-backed MUSD payments are here
+              <span className="pulse"></span>MezoPay is live on Mezo Testnet • Chain 31611 ↗
             </div>
             <h1 className="landing-h1">
-              Bitcoin as normal<br /><span className="accent">as your phone.</span>
+              <span style={{ whiteSpace: "nowrap" }}>The Venmo Era of</span><br />
+              <span className="accent" style={{ whiteSpace: "nowrap" }}>bitcoin starts here</span>
             </h1>
             <p className="hero-desc" style={{ maxWidth: "620px" }}>
-              The Venmo moment for Bitcoin. Pay @friends, split group tabs, and save in MUSD instantly. Zero gas fees, zero hex addresses. <strong style={{ whiteSpace: "nowrap" }}>True consumer banking on Bitcoin L2.</strong>
+              Send MUSD to @username, split group tabs in one transaction, save toward goals in on-chain pots, and get payment requests as <strong>encrypted XMTP messages</strong> — no hex addresses, no gas confusion, no banks.
             </p>
             <div className="hero-ctas" style={{ marginBottom: "12px" }}>
               <ConnectButton.Custom>
@@ -1239,6 +1240,7 @@ export default function Home() {
             <div className="badge-row">
               <span className="badge">⚡ EIP-712 Gasless</span>
               <span className="badge">🔒 Mezo Passport</span>
+              <span className="badge">✉️ XMTP Notifications</span>
               <span className="badge">📊 Goldsky Feed</span>
               <span className="badge">🏺 Savings Pots</span>
               <span className="net-pill">🌐 Chain 31611 Testnet</span>
