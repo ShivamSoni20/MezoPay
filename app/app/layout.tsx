@@ -55,7 +55,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }, []);
 
   // Read Username
-  const { data: rawUsername, refetch: refetchUsername } = useReadContract({
+  const { data: rawUsername, refetch: refetchUsername, isLoading: isLoadingUsername } = useReadContract({
     address: CONTRACTS.USERNAME_REGISTRY,
     abi: parseAbi(REGISTRY_ABI),
     functionName: "reverseLookup",
@@ -995,7 +995,23 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </div>
 
           {/* PAGE CONTENT */}
-          <div className="page">{children}</div>
+          <div className="page">
+            {!isLoadingUsername && !username && pathname !== "/app/settings" ? (
+              <div style={{ textAlign: "center", padding: "100px 20px", background: "white", borderRadius: "16px", border: "1px solid var(--border)", boxShadow: "0 4px 6px rgba(0,0,0,0.05)" }}>
+                <div style={{ fontSize: "3rem", marginBottom: "16px" }}>👋</div>
+                <h2 style={{ fontFamily: "var(--font-syne), sans-serif", fontSize: "1.5rem", fontWeight: 800, marginBottom: "8px" }}>Welcome to MezoPay</h2>
+                <p style={{ color: "var(--gray)", marginBottom: "24px" }}>You need to claim a @username to start sending and receiving money.</p>
+                <button 
+                  onClick={() => router.push("/app/settings")}
+                  style={{ background: "var(--orange)", color: "white", padding: "12px 24px", borderRadius: "8px", fontWeight: 700 }}
+                >
+                  Claim @username →
+                </button>
+              </div>
+            ) : (
+              children
+            )}
+          </div>
         </main>
 
         {/* MOBILE BOTTOM NAVIGATION */}
