@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useApp } from "../context";
 import { usePublicClient, useWriteContract } from "wagmi";
 import { parseUnits, parseAbi } from "viem";
-import { CONTRACTS, MUSD_ABI, REGISTRY_ABI } from "@/lib/contracts";
+import { CONTRACTS, MUSD_ABI, REGISTRY_ABI, SPLIT_ABI } from "@/lib/contracts";
 import {
   loadRequests,
   updateRequestStatus,
@@ -283,14 +283,39 @@ export default function RequestPage() {
         return;
       }
 
-      showToast("Sending payment transaction...");
       const amountWei = parseUnits(amt.toString(), 18);
-      const hash = await writeContractAsync({
-        address: CONTRACTS.MUSD,
-        abi: parseAbi(MUSD_ABI),
-        functionName: "transfer",
-        args: [resolvedAddress, amountWei],
-      });
+      let hash;
+
+      if (reqId.startsWith("0x") && reqId.length === 66) {
+        // It's a Split Tab reminder! Route payment through SplitManager
+        showToast("Approving MUSD for Split Tab...");
+        const approveHash = await writeContractAsync({
+          address: CONTRACTS.MUSD,
+          abi: parseAbi(MUSD_ABI),
+          functionName: "approve",
+          args: [CONTRACTS.SPLIT_MANAGER, amountWei],
+        });
+        if (publicClient) {
+          await publicClient.waitForTransactionReceipt({ hash: approveHash });
+        }
+        
+        showToast("Paying Split Tab share...");
+        hash = await writeContractAsync({
+          address: CONTRACTS.SPLIT_MANAGER,
+          abi: parseAbi(SPLIT_ABI),
+          functionName: "payShare",
+          args: [reqId as `0x${string}`],
+        });
+      } else {
+        // Standard P2P Transfer
+        showToast("Sending payment transaction...");
+        hash = await writeContractAsync({
+          address: CONTRACTS.MUSD,
+          abi: parseAbi(MUSD_ABI),
+          functionName: "transfer",
+          args: [resolvedAddress, amountWei],
+        });
+      }
 
       showToast(`Paid $${amt.toFixed(2)} to ${fromHandle}!`, `$${amt.toFixed(2)}`);
 
