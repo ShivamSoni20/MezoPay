@@ -8,10 +8,10 @@ export const CONTRACTS = {
       "0x8eB4E69A550Dc63BaB674469eBC516d893793de8") as `0x${string}`,
   SPLIT_MANAGER:
     (process.env.NEXT_PUBLIC_SPLIT ||
-      "0x9cd6D4A92939A1b93fBb3c848c2cF3e9f09D4C10") as `0x${string}`,
+      "0x11B5B5058C85CB446e4d68765B24661Da58BE83A") as `0x${string}`,
   SAVINGS_POT:
     (process.env.NEXT_PUBLIC_SAVINGS_POT ||
-      "0x72290EB00a06c4a5582c64e8E336F6e4D242bE87") as `0x${string}`,
+      "0xCEB877c8dD2f67A77353790d961Ee56fF7F1a4e4") as `0x${string}`,
 } as const;
 
 export const MUSD_ABI = [
@@ -38,6 +38,7 @@ export const SPLIT_ABI = [
   "function createTab(string title, address[] members, uint256[] shares) returns (bytes32)",
   "function settleTab(bytes32 tabId)",
   "function settleWithPermit(bytes32 tabId, address member, uint256 amount, uint256 deadline, uint8 v, bytes32 r, bytes32 s)",
+  "function payShare(bytes32 tabId)",
   "function getTab(bytes32 tabId) view returns (address, string, address[], uint256[], bool, uint256)",
   "function hasPaid(bytes32 tabId, address member) view returns (bool)",
   "function getUserTabs(address user) view returns (bytes32[])",
@@ -48,6 +49,7 @@ export const SAVINGS_POT_ABI = [
   "function createPot(string name, uint256 target, uint256 lockSeconds) returns (bytes32)",
   "function deposit(bytes32 potId, uint256 amount)",
   "function withdraw(bytes32 potId)",
+  "function creatorUnlock(bytes32 potId)",
   "function getDeposit(bytes32 potId, address user) view returns (uint256)",
   "function pots(bytes32) view returns (address creator, string name, uint256 targetAmount, uint256 totalDeposited, uint256 unlockTime, bool distributed)",
   "function potCount() view returns (uint256)"

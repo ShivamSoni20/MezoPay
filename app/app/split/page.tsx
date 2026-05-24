@@ -5,6 +5,7 @@ import { useApp } from "../context";
 import { usePublicClient, useWriteContract, useAccount } from "wagmi";
 import { parseUnits, parseAbi } from "viem";
 import { CONTRACTS, SPLIT_ABI, REGISTRY_ABI } from "@/lib/contracts";
+import Link from "next/link";
 
 interface Participant {
   name: string;
@@ -14,7 +15,7 @@ interface Participant {
 }
 
 export default function SplitPage() {
-  const { tabs, setTabs, showToast, friends } = useApp();
+  const { tabs, setTabs, showToast, friends, sendPaymentRequest } = useApp();
   const { address: userAddress } = useAccount();
   const publicClient = usePublicClient();
   const { writeContractAsync } = useWriteContract();
@@ -148,18 +149,47 @@ export default function SplitPage() {
       showToast("Group tab created on-chain!", title);
 
       // Add to local state
+      const newMembersDetail = participants.map(p => ({
+        address: p.address,
+        username: p.handle === 'you' ? '' : p.handle,
+        share: p.share,
+        paid: p.handle === 'you',
+        paymentDate: ''
+      }));
+
       setTabs((prev) => [
         {
           id: onChainTabId,
           title,
+          creator: userAddress || "",
           members: participants.map((p) => `@${p.handle}`),
           total: parseFloat(totalAmount),
           paid: participants.find((p) => p.handle === "you")?.share || 0,
           settled: false,
           onChainHash: hash,
+          membersDetail: newMembersDetail,
         },
         ...prev,
       ]);
+
+      // Send XMTP invites
+      let inviteCount = 0;
+      for (const p of participants) {
+        if (p.handle !== "you" && p.address !== "0x0000000000000000000000000000000000000000") {
+          const success = await sendPaymentRequest(
+            p.address,
+            p.handle,
+            p.share,
+            `Split Tab: ${title}`,
+            onChainTabId
+          );
+          if (success) inviteCount++;
+        }
+      }
+      
+      if (inviteCount > 0) {
+        showToast(`Sent ${inviteCount} XMTP invites!`);
+      }
 
       // Reset
       setTitle("");
@@ -293,7 +323,7 @@ export default function SplitPage() {
           <span className="sc-title">Active Tabs</span>
         </div>
         <div className="active-tabs-list">
-          {tabs.map((tab) => {
+          {tabs.filter(t => !t.settled).map((tab) => {
             const pct = Math.min(100, Math.round((tab.paid / tab.total) * 100));
             const isCreator = tab.members.includes("@you");
 
@@ -330,6 +360,16 @@ export default function SplitPage() {
                     </span>
                   )}
                 </div>
+
+                    <div className="tab-meta" style={{ marginTop: "8px" }}>
+                      <span className={`tab-badge ${tab.settled ? "paid" : "pending"}`}>
+                        {tab.settled ? "Settled" : "Pending"}
+                      </span>
+                      <span style={{ margin: "0 8px", opacity: 0.5 }}>•</span>
+                      <Link href={`/app/split/${tab.id}`} style={{ fontSize: "0.8rem", fontWeight: 700, color: "#F97316", textDecoration: "none" }}>
+                        View Details →
+                      </Link>
+                    </div>
 
                 <div className="at-progress">
                   <div className="at-prog-fill" style={{ width: `${pct}%` }}></div>

@@ -27,8 +27,13 @@ export default function SavingsPage() {
   const [potEmoji, setPotEmoji] = useState("✈️");
   const [potName, setPotName] = useState("");
   const [potTarget, setPotTarget] = useState("");
-  const [potLockDays, setPotLockDays] = useState("30");
+  const [potUnlockDate, setPotUnlockDate] = useState("");
   const [isCreating, setIsCreating] = useState(false);
+  
+  // Withdraw / Settle
+  const [isWithdrawing, setIsWithdrawing] = useState(false);
+  const [isSettling, setIsSettling] = useState(false);
+  const [isClaiming, setIsClaiming] = useState(false);
   
   // Deposit State
   const [depositAmt, setDepositAmt] = useState("");
@@ -69,6 +74,10 @@ export default function SavingsPage() {
                   user
                   amount
                 }
+                withdrawals {
+                  user
+                  amount
+                }
               }
             }
           `;
@@ -87,6 +96,20 @@ export default function SavingsPage() {
               const daysLeft = Math.max(0, Math.ceil((unlockDateObj.getTime() - Date.now()) / 86400000));
               const type = p.creator.toLowerCase() === address?.toLowerCase() ? 'solo' : 'group';
               
+              const userAddress = address?.toLowerCase() || "";
+              
+              // Calculate user's net balance in the pot
+              const userDeposits = (p.deposits || [])
+                .filter((d: any) => d.user.toLowerCase() === userAddress)
+                .reduce((sum: number, d: any) => sum + (Number(d.amount) / 1e18), 0);
+                
+              const userWithdrawals = (p.withdrawals || [])
+                .filter((w: any) => w.user.toLowerCase() === userAddress)
+                .reduce((sum: number, w: any) => sum + (Number(w.amount) / 1e18), 0);
+                
+              const userBalance = Math.max(0, userDeposits - userWithdrawals);
+              const hasClaimed = userWithdrawals > 0 && userBalance === 0;
+              
               return {
                 id: p.id,
                 type,
@@ -96,6 +119,8 @@ export default function SavingsPage() {
                 saved,
                 unlockDate,
                 daysLeft,
+                userBalance,
+                hasClaimed,
                 members: [{ handle: type === 'solo' ? 'you' : p.creator.slice(0, 6), color: '#F97316', paid: true, share: target }]
               };
             });
@@ -120,43 +145,137 @@ export default function SavingsPage() {
   }, [publicClient, address]);
 
   const handleCreatePot = async () => {
-    if (!potName || !potTarget || !potLockDays || !publicClient) return;
+    if (!potName || !potTarget || !potUnlockDate || !publicClient) return;
     setIsCreating(true);
     try {
+      const unlockTimeMs = new Date(potUnlockDate).getTime();
+      if (unlockTimeMs <= Date.now()) throw new Error("Unlock date must be in future");
+      const lockSeconds = Math.floor((unlockTimeMs - Date.now()) / 1000);
+      
       showToast("Creating Saving Pot on-chain...");
-      const lockSeconds = parseInt(potLockDays) * 24 * 60 * 60;
       
       const hash = await writeContractAsync({
         address: CONTRACTS.SAVINGS_POT,
-        abi: SAVINGS_POT_ABI,
+        abi: parseAbi(SAVINGS_POT_ABI),
         functionName: "createPot",
         args: [potName, parseUnits(potTarget, 18), BigInt(lockSeconds)],
       });
       
       showToast("Waiting for confirmation...");
-      await publicClient.waitForTransactionReceipt({ hash });
+      const receipt = await publicClient.waitForTransactionReceipt({ hash });
+      
+      let onChainPotId = hash; // fallback
+      const log = receipt.logs.find(l => l.address.toLowerCase() === CONTRACTS.SAVINGS_POT.toLowerCase());
+      if (log && log.topics[1]) {
+        onChainPotId = log.topics[1];
+      }
+      
       showToast("Pot created successfully!");
       setShowCreateModal(false);
       
+      const daysLeft = Math.ceil(lockSeconds / 86400);
+      
       // Add a dummy pot to state to show it immediately
       setPots([{
-        id: hash, type: potType, emoji: potEmoji, name: potName,
-        target: Number(potTarget), saved: 0, unlockDate: new Date(Date.now() + lockSeconds * 1000).toISOString().split('T')[0],
-        daysLeft: parseInt(potLockDays),
+        id: onChainPotId, type: potType, emoji: potEmoji, name: potName,
+        target: Number(potTarget), saved: 0, unlockDate: potUnlockDate,
+        daysLeft,
         members: [{ handle: 'you', color: '#F97316', paid: true, share: Number(potTarget) }],
         isReal: true
       }, ...pots]);
       
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      showToast("Failed to create pot");
+      showToast(err.message || "Failed to create pot");
     } finally {
       setIsCreating(false);
     }
   };
 
+  const handleWithdraw = async () => {
+    if (!selectedPotId || !publicClient) return;
+    if (!selectedPotId.startsWith("0x")) return showToast("This is a mock pot!");
+    setIsWithdrawing(true);
+    try {
+      showToast("Withdrawing funds...");
+      const hash = await writeContractAsync({
+        address: CONTRACTS.SAVINGS_POT,
+        abi: parseAbi(SAVINGS_POT_ABI),
+        functionName: "withdraw",
+        args: [selectedPotId as `0x${string}`],
+      });
+      await publicClient.waitForTransactionReceipt({ hash });
+      showToast("Withdrawn successfully!");
+      refetchData();
+    } catch (e: any) {
+      console.error(e);
+      showToast(e.message || "Failed to withdraw");
+    } finally {
+      setIsWithdrawing(false);
+    }
+  };
+
+  const handleCreatorSettle = async () => {
+    if (!selectedPotId || !publicClient) return;
+    if (!selectedPotId.startsWith("0x")) return showToast("This is a mock pot!");
+    setIsSettling(true);
+    try {
+      showToast("Unlocking pot early...");
+      const hash = await writeContractAsync({
+        address: CONTRACTS.SAVINGS_POT,
+        abi: parseAbi(SAVINGS_POT_ABI),
+        functionName: "creatorUnlock",
+        args: [selectedPotId as `0x${string}`],
+      });
+      await publicClient.waitForTransactionReceipt({ hash });
+      showToast("Pot unlocked successfully!");
+      refetchData();
+    } catch (e: any) {
+      console.error(e);
+      showToast(e.message || "Failed to unlock");
+    } finally {
+      setIsSettling(false);
+    }
+  };
+
+  const handleClaim = async () => {
+    if (!selectedPotId || !publicClient) return;
+    if (!selectedPotId.startsWith("0x")) return showToast("This is a mock pot!");
+    setIsClaiming(true);
+    try {
+      showToast("Unlocking pot (Goal Met)...");
+      const unlockHash = await writeContractAsync({
+        address: CONTRACTS.SAVINGS_POT,
+        abi: parseAbi(SAVINGS_POT_ABI),
+        functionName: "creatorUnlock",
+        args: [selectedPotId as `0x${string}`],
+      });
+      await publicClient.waitForTransactionReceipt({ hash: unlockHash });
+
+      showToast("Claiming funds...");
+      const withdrawHash = await writeContractAsync({
+        address: CONTRACTS.SAVINGS_POT,
+        abi: parseAbi(SAVINGS_POT_ABI),
+        functionName: "withdraw",
+        args: [selectedPotId as `0x${string}`],
+      });
+      await publicClient.waitForTransactionReceipt({ hash: withdrawHash });
+      
+      showToast("Goal funds claimed successfully! 🎉");
+      refetchData();
+    } catch (e: any) {
+      console.error(e);
+      showToast(e.message || "Failed to claim");
+    } finally {
+      setIsClaiming(false);
+    }
+  };
+
   const handleDeposit = async () => {
     if (!depositAmt || !selectedPotId || !publicClient) return;
+    if (!selectedPotId.startsWith("0x")) {
+      return showToast("Cannot deposit into a mock pot! Create a real one first.");
+    }
     setIsDepositing(true);
     try {
       showToast("Approving MUSD...");
@@ -172,9 +291,9 @@ export default function SavingsPage() {
       showToast("Depositing to pot...");
       const depositHash = await writeContractAsync({
         address: CONTRACTS.SAVINGS_POT,
-        abi: SAVINGS_POT_ABI,
+        abi: parseAbi(SAVINGS_POT_ABI),
         functionName: "deposit",
-        args: [selectedPotId, amountWei],
+        args: [selectedPotId as `0x${string}`, amountWei],
       });
       await publicClient.waitForTransactionReceipt({ hash: depositHash });
       
@@ -385,8 +504,9 @@ export default function SavingsPage() {
         </div>
         <div className="stat-card">
           <div className="sc-lbl">Auto-Pay Active</div>
-          <div className="sc-val" style={{ color: "#0D9488" }}>$0/mo</div>
+          <div className="sc-val" style={{ color: "#0D9488", opacity: 0.5 }}>$0/mo</div>
           <div className="sc-sub">Scheduled across 0 pots</div>
+          <div className="sc-chg" style={{ color: "#F97316" }}>🚀 Coming in V2 Roadmap</div>
         </div>
         <div className="stat-card">
           <div className="sc-lbl">Unlocking Soon</div>
@@ -417,9 +537,13 @@ export default function SavingsPage() {
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'flex-end' }}>
                       <span className={`pot-badge ${p.type}`}>{p.type === 'group' ? 'Group' : 'Solo'}</span>
-                      <span className={`pot-badge ${p.daysLeft === 0 ? 'unlocked' : 'locked'}`}>
-                        {p.daysLeft === 0 ? 'Unlocked!' : `${p.daysLeft}d left`}
-                      </span>
+                      {p.hasClaimed ? (
+                        <span className="pot-badge" style={{ background: "#F3F4F6", color: "#4B5563" }}>Claimed</span>
+                      ) : (
+                        <span className={`pot-badge ${p.daysLeft === 0 ? 'unlocked' : 'locked'}`}>
+                          {p.daysLeft === 0 ? 'Unlocked!' : `${p.daysLeft}d left`}
+                        </span>
+                      )}
                     </div>
                   </div>
                   <div className="pot-bar-wrap"><div className="pot-bar" style={{ width: `${pct}%` }}></div></div>
@@ -454,7 +578,7 @@ export default function SavingsPage() {
               <div className="detail-hero">
                 <div className="dh-emoji">{activePot.emoji}</div>
                 <div className="dh-name">{activePot.name}</div>
-                <div className="dh-meta">{activePot.members.length} member{activePot.members.length > 1 ? 's' : ''} · Unlocks {activePot.unlockDate}</div>
+                <div className="dh-meta">{activePot.members.length} member{activePot.members.length > 1 ? 's' : ''} · {activePot.hasClaimed ? 'Already Claimed' : `Unlocks ${activePot.unlockDate}`}</div>
                 <div className="dh-amount">${activePot.saved.toLocaleString()} <span style={{ fontSize: "1rem", opacity: 0.6 }}>MUSD</span></div>
                 <div className="dh-pct">{Math.min(100, Math.round(activePot.saved / activePot.target * 100))}% funded · ${(activePot.target - activePot.saved).toLocaleString()} remaining</div>
               </div>
@@ -470,9 +594,34 @@ export default function SavingsPage() {
               </div>
               
               <div className="action-row">
-                <button className="act-btn primary" onClick={() => setShowDepositModal(true)}>💰 Deposit MUSD</button>
-                {activePot.type === 'group' && (
-                  <button className="act-btn" style={{ background: "white" }} onClick={() => setShowInviteModal(true)}>👥 Invite via XMTP</button>
+                {activePot.type === 'solo' && activePot.saved >= activePot.target ? (
+                  <>
+                    <div style={{ padding: "10px", fontSize: "0.85rem", color: "#15803D", fontWeight: 700, background: "#F0FDF4", borderRadius: "9px", textAlign: "center", gridColumn: "span 2" }}>
+                      🎉 Goal Fully Funded! No need to deposit more.
+                    </div>
+                    {activePot.hasClaimed ? (
+                      <div style={{ padding: "12px", fontSize: "0.85rem", color: "#6B7280", fontWeight: 700, background: "#F9FAFB", borderRadius: "9px", textAlign: "center", gridColumn: "span 2", border: "1px solid #E5E7EB" }}>
+                        ✅ You have already claimed this pot.
+                      </div>
+                    ) : (
+                      <button className="act-btn primary" style={{ gridColumn: "span 2", padding: "12px" }} onClick={handleClaim} disabled={isClaiming}>
+                        {isClaiming ? "Processing..." : "🏆 Claim Full Amount to Wallet"}
+                      </button>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <button className="act-btn primary" onClick={() => setShowDepositModal(true)}>💰 Deposit MUSD</button>
+                    {activePot.type === 'group' && (
+                      <button className="act-btn" style={{ background: "white" }} onClick={() => setShowInviteModal(true)}>👥 Invite via XMTP</button>
+                    )}
+                    <button className="act-btn" style={{ background: "white", color: "#EF4444", borderColor: "#EF4444" }} onClick={handleWithdraw} disabled={isWithdrawing}>
+                      {isWithdrawing ? "Processing..." : "Withdraw (5% Fine if Early)"}
+                    </button>
+                    <button className="act-btn" style={{ background: "white", color: "#1D4ED8", borderColor: "#1D4ED8" }} onClick={handleCreatorSettle} disabled={isSettling}>
+                      {isSettling ? "Processing..." : "Creator: Settle Early"}
+                    </button>
+                  </>
                 )}
               </div>
             </div>
@@ -496,9 +645,9 @@ export default function SavingsPage() {
                   <div style={{ fontSize: '1.2rem' }}>🐷</div>
                   <div style={{ fontSize: '0.72rem', fontWeight: 700 }}>Solo</div>
                 </div>
-                <div className={`pot-type-btn ${potType === 'group' ? 'active' : ''}`} onClick={() => setPotType('group')}>
+                <div className="pot-type-btn" style={{ opacity: 0.5, cursor: "not-allowed" }}>
                   <div style={{ fontSize: '1.2rem' }}>👥</div>
-                  <div style={{ fontSize: '0.72rem', fontWeight: 700 }}>Group</div>
+                  <div style={{ fontSize: '0.72rem', fontWeight: 700 }}>Group <span style={{color: "#F97316", fontSize: "0.55rem", display: "block"}}>(Coming Soon)</span></div>
                 </div>
               </div>
             </div>
@@ -526,8 +675,8 @@ export default function SavingsPage() {
             </div>
             
             <div className="fg">
-              <label>Lock Duration (Days)</label>
-              <input className="fi" type="number" placeholder="30" value={potLockDays} onChange={e => setPotLockDays(e.target.value)} />
+              <label>Unlock Date</label>
+              <input className="fi" type="date" value={potUnlockDate} onChange={e => setPotUnlockDate(e.target.value)} min={new Date().toISOString().split('T')[0]} />
             </div>
 
             <button className="f-submit" onClick={handleCreatePot} disabled={isCreating}>

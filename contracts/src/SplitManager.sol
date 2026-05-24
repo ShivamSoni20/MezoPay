@@ -133,6 +133,22 @@ contract SplitManager {
         }
     }
 
+    function payShare(bytes32 tabId) external {
+        Tab storage t = _requireOpenTab(tabId);
+        uint256 owed = t.owed[msg.sender];
+        if (owed == 0) revert InvalidMember();
+        if (t.paid[msg.sender]) return; // Or revert AlreadySettled()
+
+        _markPaid(t, msg.sender);
+        musd.transferFrom(msg.sender, t.creator, owed);
+        emit MemberPaid(tabId, msg.sender, owed);
+
+        if (t.paidCount == t.members.length) {
+            t.settled = true;
+            emit TabSettled(tabId, totalAmount(tabId));
+        }
+    }
+
     function getTab(bytes32 tabId)
         external
         view

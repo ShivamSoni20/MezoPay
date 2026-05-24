@@ -126,6 +126,19 @@
         "internalType": "bytes32",
         "name": "potId",
         "type": "bytes32"
+      }
+    ],
+    "name": "creatorUnlock",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "bytes32",
+        "name": "potId",
+        "type": "bytes32"
       },
       {
         "internalType": "uint256",

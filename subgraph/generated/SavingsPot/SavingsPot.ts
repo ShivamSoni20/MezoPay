@@ -357,6 +357,36 @@ export class CreatePotCall__Outputs {
   }
 }
 
+export class CreatorUnlockCall extends ethereum.Call {
+  get inputs(): CreatorUnlockCall__Inputs {
+    return new CreatorUnlockCall__Inputs(this);
+  }
+
+  get outputs(): CreatorUnlockCall__Outputs {
+    return new CreatorUnlockCall__Outputs(this);
+  }
+}
+
+export class CreatorUnlockCall__Inputs {
+  _call: CreatorUnlockCall;
+
+  constructor(call: CreatorUnlockCall) {
+    this._call = call;
+  }
+
+  get potId(): Bytes {
+    return this._call.inputValues[0].value.toBytes();
+  }
+}
+
+export class CreatorUnlockCall__Outputs {
+  _call: CreatorUnlockCall;
+
+  constructor(call: CreatorUnlockCall) {
+    this._call = call;
+  }
+}
+
 export class DepositCall extends ethereum.Call {
   get inputs(): DepositCall__Inputs {
     return new DepositCall__Inputs(this);

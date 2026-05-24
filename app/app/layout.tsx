@@ -365,10 +365,22 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               paidCount
               createdAt
             }
-            tabPayments(where: { member: $user }) {
+            tabPayments(where: { member: $userBytes }) {
               id
               amount
               timestamp
+              member
+              tab {
+                id
+                title
+                creator
+              }
+            }
+            receivedTabPayments: tabPayments(first: 100, orderBy: timestamp, orderDirection: desc) {
+              id
+              amount
+              timestamp
+              member
               tab {
                 id
                 title
@@ -403,6 +415,24 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               timestamp
               blockNumber
             }
+            potDeposits(where: { user: $userBytes }) {
+              id
+              amount
+              timestamp
+              pot {
+                id
+                name
+              }
+            }
+            potWithdrawals(where: { user: $userBytes }) {
+              id
+              amount
+              timestamp
+              pot {
+                id
+                name
+              }
+            }
           }
         `;
 
@@ -425,7 +455,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
         const result = await response.json();
         if (result.data) {
-          const { tabs: fetchedTabs, tabPayments, sentTransfers, receivedTransfers } = result.data;
+          const { tabs: fetchedTabs, tabPayments, receivedTabPayments, sentTransfers, receivedTransfers, potDeposits, potWithdrawals } = result.data;
           
           if (fetchedTabs && fetchedTabs.length > 0) {
             // Filter tabs where user is either creator OR a member
@@ -439,14 +469,17 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               const totalAmount = Number(t.shares.reduce((a: string, b: string) => BigInt(a) + BigInt(b), BigInt(0))) / 1e18;
               const isCreator = t.creator.toLowerCase() === address.toLowerCase();
               
-              let userPaid = 0;
+              let totalPaid = 0;
+              const creatorIndex = t.members.findIndex((m: string) => m.toLowerCase() === t.creator.toLowerCase());
+              if (creatorIndex >= 0) {
+                totalPaid += Number(t.shares[creatorIndex]) / 1e18;
+              }
+              
               if (t.settled) {
-                userPaid = totalAmount;
+                totalPaid = totalAmount;
               } else if (tabPayments) {
-                const paidRecord = tabPayments.find((p: any) => p.tab.id === t.id);
-                if (paidRecord) {
-                  userPaid = Number(paidRecord.amount) / 1e18;
-                }
+                const paymentsForTab = tabPayments.filter((p: any) => p.tab.id === t.id);
+                totalPaid += paymentsForTab.reduce((sum: number, p: any) => sum + (Number(p.amount) / 1e18), 0);
               }
 
               return {
@@ -455,7 +488,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 creator: t.creator,
                 members: t.members.map((m: string) => m.startsWith("0x") ? (m.slice(0, 6) + "..." + m.slice(-4)) : m),
                 total: totalAmount,
-                paid: userPaid,
+                paid: totalPaid,
                 settled: t.settled,
               };
             });
@@ -494,10 +527,27 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             tabPayments.forEach((p: any) => {
               dynamicHistory.push({
                 id: `goldsky-pay-${p.id}`,
-                type: "sent",
+                type: "split",
                 title: `Paid for Split: ${p.tab.title}`,
                 detail: `Sent to ${p.tab.creator.slice(0, 6)}...${p.tab.creator.slice(-4)}`,
                 amount: -(Number(p.amount) / 1e18),
+                date: new Date(Number(p.timestamp) * 1000).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+                hash: p.id.split("-")[0],
+                timestamp: Number(p.timestamp),
+              });
+            });
+          }
+
+          if (receivedTabPayments) {
+            // Filter locally to only include payments for tabs created by this user
+            const myReceived = receivedTabPayments.filter((p: any) => p.tab.creator.toLowerCase() === address.toLowerCase());
+            myReceived.forEach((p: any) => {
+              dynamicHistory.push({
+                id: `goldsky-recv-pay-${p.id}`,
+                type: "split",
+                title: `Received Split Payment`,
+                detail: `From ${p.member.slice(0, 6)}...${p.member.slice(-4)} for ${p.tab.title}`,
+                amount: Number(p.amount) / 1e18,
                 date: new Date(Number(p.timestamp) * 1000).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
                 hash: p.id.split("-")[0],
                 timestamp: Number(p.timestamp),
@@ -563,6 +613,36 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 timestamp: Number(tx.timestamp),
               });
             }
+          }
+
+          if (potDeposits) {
+            potDeposits.forEach((d: any) => {
+              dynamicHistory.push({
+                id: `goldsky-pot-dep-${d.id}`,
+                type: "saving pots history",
+                title: `Deposited to ${d.pot.name}`,
+                detail: "Savings Pot",
+                amount: -(Number(d.amount) / 1e18),
+                date: new Date(Number(d.timestamp) * 1000).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+                hash: d.id.split("-")[0],
+                timestamp: Number(d.timestamp),
+              });
+            });
+          }
+
+          if (potWithdrawals) {
+            potWithdrawals.forEach((w: any) => {
+              dynamicHistory.push({
+                id: `goldsky-pot-with-${w.id}`,
+                type: "saving pots history",
+                title: `Withdrew from ${w.pot.name}`,
+                detail: "Savings Pot",
+                amount: Number(w.amount) / 1e18,
+                date: new Date(Number(w.timestamp) * 1000).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+                hash: w.id.split("-")[0],
+                timestamp: Number(w.timestamp),
+              });
+            });
           }
 
           // Load off-chain requests from LocalStorage
@@ -791,7 +871,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     { label: "Request", icon: "↓", path: "/app/request" },
     { label: "Split Tab", icon: "⚖️", path: "/app/split" },
     { label: "Savings Pots", icon: "🏺", path: "/app/earn", badge: "Live", badgeClass: "green" },
-    { label: "Virtual Card", icon: "💳", path: "/app/card" },
+    { label: "Virtual Card", icon: "💳", path: "/app/card", badge: "Demo", badgeClass: "blue" },
     { label: "History", icon: "📋", path: "/app/history" },
     { label: "Friends", icon: "👥", path: "/app/friends" },
     { label: "Settings", icon: "⚙️", path: "/app/settings" },
@@ -868,7 +948,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 <span className="nav-icon">{item.icon}</span>
                 {item.label}
                 {item.badge && (
-                  <span className={`n-badge ${item.badgeClass === "green" ? "green" : ""}`}>
+                  <span className={`n-badge ${item.badgeClass === "green" ? "green" : item.badgeClass === "blue" ? "blue" : ""}`}>
                     {item.badge}
                   </span>
                 )}

@@ -48,12 +48,29 @@ contract SavingsPot {
     
     function withdraw(bytes32 potId) external {
         Pot storage p = pots[potId];
-        require(block.timestamp >= p.unlockTime, "Still locked");
         uint256 share = p.deposits[msg.sender];
         require(share > 0, "Nothing to withdraw");
-        p.deposits[msg.sender] = 0;
-        musd.transfer(msg.sender, share);
-        emit Withdrawn(potId, msg.sender, share);
+        
+        if (block.timestamp < p.unlockTime && !p.distributed) {
+            require(msg.sender != p.creator, "Creator cannot withdraw early");
+            uint256 penalty = (share * 5) / 100; // 5% penalty
+            uint256 transferAmount = share - penalty;
+            p.deposits[msg.sender] = 0;
+            p.deposits[p.creator] += penalty;
+            musd.transfer(msg.sender, transferAmount);
+            emit Withdrawn(potId, msg.sender, transferAmount);
+        } else {
+            p.deposits[msg.sender] = 0;
+            musd.transfer(msg.sender, share);
+            emit Withdrawn(potId, msg.sender, share);
+        }
+    }
+    
+    function creatorUnlock(bytes32 potId) external {
+        Pot storage p = pots[potId];
+        require(msg.sender == p.creator, "Not creator");
+        require(!p.distributed, "Already unlocked");
+        p.distributed = true;
     }
     
     function getDeposit(bytes32 potId, address user) external view returns (uint256) {

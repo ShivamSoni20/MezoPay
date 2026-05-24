@@ -441,6 +441,36 @@ export class CreateTabCall__Outputs {
   }
 }
 
+export class PayShareCall extends ethereum.Call {
+  get inputs(): PayShareCall__Inputs {
+    return new PayShareCall__Inputs(this);
+  }
+
+  get outputs(): PayShareCall__Outputs {
+    return new PayShareCall__Outputs(this);
+  }
+}
+
+export class PayShareCall__Inputs {
+  _call: PayShareCall;
+
+  constructor(call: PayShareCall) {
+    this._call = call;
+  }
+
+  get tabId(): Bytes {
+    return this._call.inputValues[0].value.toBytes();
+  }
+}
+
+export class PayShareCall__Outputs {
+  _call: PayShareCall;
+
+  constructor(call: PayShareCall) {
+    this._call = call;
+  }
+}
+
 export class SettleTabCall extends ethereum.Call {
   get inputs(): SettleTabCall__Inputs {
     return new SettleTabCall__Inputs(this);

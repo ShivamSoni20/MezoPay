@@ -28,7 +28,7 @@ dataSources:
     name: SplitManager
     network: mezo-testnet
     source:
-      address: "0x9cd6D4A92939A1b93fBb3c848c2cF3e9f09D4C10"
+      address: "0x11B5B5058C85CB446e4d68765B24661Da58BE83A"
       abi: SplitManager
       startBlock: 13148340
     mapping:
@@ -73,7 +73,7 @@ dataSources:
     name: SavingsPot
     network: mezo-testnet
     source:
-      address: "0x72290EB00a06c4a5582c64e8E336F6e4D242bE87"
+      address: "0xCEB877c8dD2f67A77353790d961Ee56fF7F1a4e4"
       abi: SavingsPot
       startBlock: 13148340
     mapping:
