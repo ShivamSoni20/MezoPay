@@ -24,29 +24,12 @@ All features below are **live on Mezo Testnet (Chain 31611)**.
 
 ## Roadmap Overview
 
-
-
 ---
 
 ## Phase 1 — Mainnet Foundation
-**Target: Q3 2026**
+**Target: Next 1-2 Months**
 
 The bridge from testnet demo to production-grade, user-facing product.
-
-```mermaid
-flowchart TD
-    A[Hackathon MVP\nTestnet Live] --> B[Security Audit\nContracts]
-    B --> C[Mezo Mainnet Deploy\nChain 31611 Mainnet]
-    C --> D[Full EIP-2612\nPermit Path]
-    C --> E[Group Savings Pots\nGeneral Availability]
-    C --> F[Mezo Earn Integration\nYield Display in UI]
-    D --> G[Phase 1 Complete\nProduction-Ready]
-    E --> G
-    F --> G
-
-    style A fill:#FFF7ED,stroke:#F97316
-    style G fill:#F0FDF4,stroke:#22C55E
-```
 
 ### Milestones
 
@@ -71,61 +54,26 @@ flowchart TD
 - Multi-member deposit tracking
 - XMTP group invite with pot details and deep link
 
-**M1.5 — Mezo Earn Yield Display**
+---
+
+## Phase 2 — Yield & Commerce Ecosystem
+**Target: Next 3-6 Months**
+
+Transform MezoPay into a real spending instrument usable at physical and online merchants.
+
+### Milestones
+
+**M2.1 — Mezo Earn Yield Display**
 - Connect to Mezo Earn API/contract
 - Show live yield accruing on MUSD balance in dashboard
 - "Your MUSD is working" narrative in UI
 
----
-
-## Phase 2 — Card & Commerce
-**Target: Q4 2026**
-
-Transform MezoPay into a real spending instrument usable at physical and online merchants.
-
-```mermaid
-flowchart LR
-    subgraph card["💳 Card Program"]
-        MA[Marqeta API\nCard Issuance]
-        VC[Virtual Card\nReal Card Numbers]
-        PC[Physical Card\nDirect Mail]
-    end
-
-    subgraph commerce["🛒 Commerce Tools"]
-        POS[Merchant POS SDK\nQR + NFC]
-        SUB[Subscription\nBilling Engine]
-        BNPL[Buy Now\nPay Later]
-    end
-
-    MUSD[(MUSD\nBalance)] --> MA
-    MUSD --> POS
-    MA --> VC
-    MA --> PC
-    POS --> SUB
-    POS --> BNPL
-
-    style MUSD fill:#FFF7ED,stroke:#F97316
-```
-
-### Milestones
-
-**M2.1 — Marqeta Virtual Card Program**
-- Integrate Marqeta card-issuing API
-- Issue real Mastercard/Visa virtual card numbers backed by MUSD balance
-- Freeze/unfreeze, spending limits, transaction notifications
-- Compliance: KYC for card issuance (Persona or Stripe Identity)
-
-**M2.2 — Merchant POS SDK**
-- JavaScript SDK for merchants to accept MUSD
-- QR code + NFC tap-to-pay flow
-- Settlement in MUSD to merchant wallet
-- Dashboard for merchant transaction history
+**M2.2 — Merchant POS SDK (MUSD)**
+- QR-code based POS SDK for physical merchants
+- Instant MUSD settlement with zero interchange fees
+- Merchant dashboard for transaction history
 
 **M2.3 — Subscription Billing Module**
-- Recurring payment smart contract with time-based pull mechanism
-- Creator or merchant sets up subscription plans
-- User approves once; contract pulls MUSD monthly/weekly
-- Cancel any time; instant on-chain
 
 **M2.4 — Buy Now Pay Later**
 - BNPL contract: user pays 25% now, rest split over 3 months
@@ -185,69 +133,15 @@ flowchart TD
 
 ---
 
-## Phase 4 — Ecosystem & SDK
-**Target: Q3 2027**
-
-Open MezoPay's infrastructure to third-party builders and expand into creator/social economy.
-
-```mermaid
-flowchart LR
-    subgraph creators["🎨 Creator Economy"]
-        TIP[Tipping\nSystem]
-        CSUB[Creator\nSubscriptions]
-        GATE[Token-Gated\nContent]
-    end
-
-    subgraph sdk["🔧 Developer SDK"]
-        JSDK[MezoPay JS SDK]
-        WDGT[Embeddable\nPayment Widget]
-        API2[REST API\nfor Merchants]
-    end
-
-    subgraph market["🗺️ Marketplace"]
-        DIR[Merchant\nDirectory]
-        REW[MUSD Rewards\nProgram]
-    end
-
-    JSDK --> WDGT
-    JSDK --> API2
-    JSDK --> TIP
-    JSDK --> CSUB
-    DIR --> REW
-```
-
-### Milestones
-
-**M4.1 — Creator Tipping & Subscriptions**
-- One-click MUSD tip button embeddable on any website
-- Creator subscription tiers with XMTP-gated content delivery
-- Revenue dashboard for creators
-
-**M4.2 — Merchant Marketplace Directory**
-- In-app directory of MUSD-accepting merchants
-- Merchant profiles, categories, reviews
-- MUSD cashback/rewards for transactions at participating merchants
-
-**M4.3 — MezoPay SDK**
-- Open-source JavaScript SDK
-- Embeddable payment widget (`<MezoPayButton />`)
-- REST API for server-side payment verification
-- Documentation site at `docs.mezopay.app`
-
----
-
 ## Success Metrics by Phase
 
 | Phase | Key Metric | Target |
 |---|---|---|
 | Phase 1 | Mainnet wallets registered | 1,000 @usernames |
 | Phase 1 | MUSD volume processed | $50,000 |
-| Phase 2 | Virtual cards issued | 500 |
 | Phase 2 | Merchants onboarded | 50 |
-| Phase 3 | Mobile app downloads | 5,000 |
-| Phase 3 | Monthly active users | 1,000 |
-| Phase 4 | SDK integrations | 20 |
-| Phase 4 | Creator accounts | 200 |
+| Phase 3 | Virtual cards issued | 500 |
+| Phase 3 | Monthly active users | 5,000 |
 
 ---
 
